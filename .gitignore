@@ -74,3 +74,13 @@ Thumbs.db
 
 # Local deployment helper bundles
 greennode-agentbase-skills/
+
+# Local-only project notes and demo helpers
+demo.py
+conftest.py
+PROJECT_DOC_v4.md
+DEPLOY.md
+ARCHITECTURE_AGENTIC.md
+.gitattributes
+.env.example
+.dockerignore
