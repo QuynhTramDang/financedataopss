@@ -1,0 +1,3 @@
+2026-06-13 02:30:10 INFO  task daily_orders_pipeline started
+2026-06-13 02:30:55 ERROR Schema mismatch in stg_orders: required column 'order_channel' added by upstream
+2026-06-13 02:30:55 ERROR model stg_orders failed to compile

@@ -1,0 +1,4 @@
+2026-06-13 06:00:00 INFO  task transform_margin started
+2026-06-13 06:00:12 ERROR Traceback (most recent call last):
+2026-06-13 06:00:12 ERROR   File "transform_margin.py", line 42, in compute
+2026-06-13 06:00:12 ERROR KeyError: 'amount'

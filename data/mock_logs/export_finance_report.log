@@ -1,0 +1,3 @@
+2026-06-13 05:00:00 INFO  task export_finance_report started
+2026-06-13 05:00:08 ERROR permission denied for table finance_revenue_report
+2026-06-13 05:00:08 ERROR task export_finance_report failed

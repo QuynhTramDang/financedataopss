@@ -1,0 +1,4 @@
+2026-06-13 03:01:12 INFO  task load_stripe_payments started
+2026-06-13 03:01:45 WARN  Stripe API responded slowly
+2026-06-13 03:02:01 ERROR HTTP 429 Too Many Requests: rate limit exceeded
+2026-06-13 03:02:01 ERROR task load_stripe_payments failed after 3 retries
