@@ -6,7 +6,11 @@ langchain-core>=0.3.0
 anthropic>=0.40.0
 openai>=1.40.0          # dùng cho model nhỏ qua endpoint OpenAI-compatible (Qwen/Gemma: Ollama, OpenRouter, ...)
 
-# UI
+# API server
+fastapi>=0.115.0
+uvicorn>=0.30.0
+
+# UI (legacy Streamlit — giữ để chạy local)
 streamlit>=1.38.0
 
 # MCP integration (M1+) — chỉ cần khi bật RealMCPTransport; test/CI dùng FakeTransport không cần

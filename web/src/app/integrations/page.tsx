@@ -4,14 +4,35 @@ import { Badge, Panel, PageHead, Loading, Empty, useFetch } from "@/components/u
 
 export default function IntegrationsPage() {
   const { data, loading, error } = useFetch(() => api.integrations(), []);
+  const { data: health } = useFetch(() => api.mcpHealth(), []);
   return (
     <>
       <PageHead crumb="Govern / Integrations" title="Integrations"
         sub="MCP-backed systems and connector health. Tools exposed to agents stay allow-listed and governed by the same tiers." />
       {error && <Empty icon="⚠" text={`API không kết nối được (${error}).`} />}
       {loading && <Loading rows={5} />}
+
+      {health && (
+        <Panel title="Live MCP connection" sub={health.mcp_live ? "RealMCPTransport active — agent calls hit your real systems" : "FakeTransport (offline) — set *_MCP_ENABLED in .env to go live"} flush>
+          <table>
+            <thead><tr><th>MCP server</th><th>Enabled</th><th>Connection</th><th>Tools (live)</th><th>Detail</th></tr></thead>
+            <tbody>
+              {health.servers.map((s) => (
+                <tr key={s.name}>
+                  <td><strong>{s.name}</strong></td>
+                  <td><Badge t={s.enabled ? "ok" : "neu"}>{s.enabled ? "on" : "off"}</Badge></td>
+                  <td><Badge t={s.connected ? "ok" : s.enabled ? "bad" : "neu"}>{s.connected ? "connected" : s.enabled ? "error" : "—"}</Badge></td>
+                  <td className="mono">{(s.tools || []).join(", ") || "—"}</td>
+                  <td className="cellsub">{s.detail || (s.connected ? "live" : "")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Panel>
+      )}
+
       {data && (
-        <div className="grid">
+        <div className="grid" style={{ marginTop: 16 }}>
           <Panel title="Connector health" sub="MCP servers & external systems" flush>
             <table>
               <thead><tr><th>Connector</th><th>Type</th><th>Status</th><th>Auth</th><th>Scopes</th><th>Calls</th><th>Error rate</th></tr></thead>

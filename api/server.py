@@ -14,6 +14,7 @@ Design notes
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -21,6 +22,23 @@ from typing import Any, Optional
 _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+
+# Load .env so the process has GITLAB_* / AIRFLOW_* and the gateway can switch to the REAL MCP
+# transport (otherwise it falls back to FakeTransport and never contacts GitLab/Airflow).
+try:
+    from dotenv import load_dotenv  # type: ignore
+
+    load_dotenv(_ROOT / ".env")
+except Exception:  # noqa: BLE001
+    pass
+
+_MCP_LIVE = False
+try:
+    from orchestration.mcp_transport import maybe_enable_real_mcp  # noqa: E402
+
+    _MCP_LIVE = maybe_enable_real_mcp()   # True if .env declared GitLab/Airflow MCP servers
+except Exception:  # noqa: BLE001
+    _MCP_LIVE = False
 
 from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
@@ -33,10 +51,15 @@ app = FastAPI(title="Finance DataOps Console API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
 
 # ─────────────────────────── In-memory store ───────────────────────────
 
@@ -671,6 +694,45 @@ def run_agent(inv_id: str) -> dict[str, Any]:
 
 # ─────────────────────────── Approvals + action loop ───────────────────────────
 
+def _gitlab_mr_state(iid: Any) -> dict[str, Any]:
+    """Read the REAL state of an MR (opened/merged/closed) from GitLab. {} if unavailable."""
+    import json
+    import urllib.parse
+    import urllib.request
+    base, tok = os.getenv("GITLAB_API_URL", ""), os.getenv("GITLAB_TOKEN", "")
+    pid = urllib.parse.quote(os.getenv("GITLAB_PROJECT_ID", ""), safe="")
+    if not (base and tok and pid and iid):
+        return {}
+    try:
+        req = urllib.request.Request(f"{base}/projects/{pid}/merge_requests/{iid}",
+                                     headers={"PRIVATE-TOKEN": tok})
+        with urllib.request.urlopen(req, timeout=4) as r:
+            return json.load(r)
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _refresh_merge(ap: dict[str, Any]) -> None:
+    """If a stage-1 MR approval is approved, poll GitLab for the real merge state and, once
+    merged, flip the merge gate to done so the flow advances to the DAG re-run."""
+    if ap.get("status") != "approved" or not ap.get("mr_iid") or ap.get("mr_merged"):
+        return
+    mr = _gitlab_mr_state(ap["mr_iid"])
+    if mr.get("state") != "merged":
+        return
+    ap["mr_merged"] = True
+    sha = (mr.get("merge_commit_sha") or "")[:8]
+    for s in (ap.get("action_result") or {}).get("steps", []):
+        if s.get("name") == "merge gate (human)":
+            s["status"] = "done"
+            s["detail"] = f"MR !{ap['mr_iid']} merged into main ✓ ({sha}). Approve the DAG re-run below."
+        elif s.get("name") == "next: re-run DAG":
+            s["status"] = "ready"
+            s["detail"] = f"MR merged — approve re-running the DAG now to recompute on the fix."
+    ar = ap.get("action_result") or {}
+    ar.setdefault("audit", []).append(f"gitlab MR !{ap['mr_iid']} state=merged (polled live)")
+
+
 def _enrich_approval(ap: dict[str, Any]) -> dict[str, Any]:
     """Attach the linked investigation's title/status/domain so the inbox shows WHICH incident."""
     inv = next((i for i in _STORE["investigations"] if i["id"] == ap.get("investigation_id")), None)
@@ -683,12 +745,16 @@ def _enrich_approval(ap: dict[str, Any]) -> dict[str, Any]:
 
 @app.get("/api/approvals")
 def list_approvals() -> list[dict[str, Any]]:
+    for a in _STORE["approvals"]:
+        _refresh_merge(a)   # live-poll GitLab so a merged MR advances the flow on refresh
     return [_enrich_approval(a) for a in _STORE["approvals"]]
 
 
 @app.get("/api/approvals/{ap_id}")
 def get_approval(ap_id: str) -> dict[str, Any]:
-    return _enrich_approval(_approval(ap_id))
+    ap = _approval(ap_id)
+    _refresh_merge(ap)
+    return _enrich_approval(ap)
 
 
 def _dispatch(tool: str, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -717,41 +783,50 @@ def _apply_mr(inv: dict[str, Any], ap_id: str) -> dict[str, Any]:
         pipeline = get_contract(metric).get("pipeline", "pipeline")
     except Exception:  # noqa: BLE001
         pipeline = "pipeline"
-    _TXN_SEQ["mr"] += 1
-    mr = _TXN_SEQ["mr"]
     branch = f"fix/{inv['id']}-{metric}"
-    d = _dispatch("gitlab_create_mr", {"title": f"[DATA] fix {metric} {date} ({inv['id']})",
-                                       "source_branch": branch, "target_branch": "main"})
-    # spawn the stage-2 approval (re-run the DAG after merge)
+    d = _dispatch("gitlab_create_mr", {
+        "title": f"[DataOps Twin] fix {metric} {date} ({inv['id']})",
+        "description": (inv.get("root_cause") or "")[:2000],
+        "source_branch": branch, "target_branch": "main"})
+    payload = (d.get("raw") or {}).get("data") or {}
+    iid = payload.get("iid")
+    web_url = payload.get("web_url")
+    live = bool(web_url)
+    mr_label = f"!{iid}" if iid else "(created)"
+    # spawn the stage-2 approval (re-run the DAG AFTER the human merges the MR on GitLab)
     rerun_id = f"ap_rerun_{inv['id']}"
     if not any(a["id"] == rerun_id for a in _STORE["approvals"]):
         _STORE["approvals"].append({
             "id": rerun_id, "investigation_id": inv["id"], "stage": "rerun",
-            "title": f"Re-run DAG {pipeline} for {date} (after merge)",
+            "title": f"Re-run DAG {pipeline} for {date} (after MR {mr_label} merged)",
             "automation": f"{inv.get('project', 'DataOps')} triage", "risk": "L3",
             "impact": f"Recompute {metric} for {date} on the merged fix", "age": "now",
-            "why": f"Reviewer merged MR !{mr} into main. The metric must be recomputed on the patched "
-                   f"logic before it is trusted — trigger an Airflow backfill of {pipeline} for {date}.",
+            "why": f"MR {mr_label} is open on GitLab. After you (or your reviewer) merge it into main, "
+                   f"approve here to trigger an Airflow backfill of {pipeline} for {date} and re-verify.",
             "rollback": "Backfill is idempotent; re-running is safe.",
             "validation": "Post-run reconciliation must read 0% before resolving.",
-            "status": "pending", "action_result": None,
+            "status": "pending", "action_result": None, "mr_web_url": web_url,
         })
     inv["status"] = "awaiting_rerun"
     inv["rerun_approval_id"] = rerun_id
     steps = [
         {"name": "gitlab_create_mr", "tier": "L2", "status": d["status"],
-         "detail": f"MR !{mr} created on branch {branch} → main (governed via MCP). Awaiting reviewer merge.", "link": None},
-        {"name": "reviewer merged", "tier": "—", "status": "done",
-         "detail": f"Reviewer merged MR !{mr} into main. (Simulated — connect a live GitLab MCP server for real merge.)", "link": None},
+         "detail": (f"MR {mr_label} created on branch {branch} → main "
+                    + ("(LIVE on GitLab via MCP)." if live else "(governed via MCP).")),
+         "link": web_url},  # REAL gitlab.com URL when live
+        {"name": "merge gate (human)", "tier": "—", "status": "pending",
+         "detail": "Open the MR on GitLab and merge it (no auto-merge). Then approve the re-run below.",
+         "link": web_url},
         {"name": "next: re-run DAG", "tier": "L3", "status": "pending",
-         "detail": f"System proposes re-running {pipeline} for {date}. Approve it below to trigger Airflow.",
+         "detail": f"After merge, approve re-running {pipeline} for {date} → triggers Airflow.",
          "link": f"approval:{rerun_id}"},
     ]
     audit = [f"{ap_id} approved by Trâm Đ. (Data Engineer)",
-             f"gitlab_create_mr · L2 · allow-listed · MCP gateway · {d['status']}",
-             f"reviewer merge MR !{mr} (simulated)",
-             f"spawned re-run approval {rerun_id} (awaiting human)"]
-    return {"steps": steps, "audit": audit, "mode": "stage1_mr_merged", "next_approval": rerun_id}
+             f"gitlab_create_mr · L2 · allow-listed · MCP gateway · {d['status']}"
+             + (f" · MR {mr_label}" if iid else ""),
+             f"spawned re-run approval {rerun_id} (awaiting human merge + approval)"]
+    return {"steps": steps, "audit": audit, "mode": "stage1_mr_created", "next_approval": rerun_id,
+            "mr_web_url": web_url, "mr_iid": iid}
 
 
 def _apply_rerun(inv: dict[str, Any], ap_id: str) -> dict[str, Any]:
@@ -763,12 +838,15 @@ def _apply_rerun(inv: dict[str, Any], ap_id: str) -> dict[str, Any]:
         pipeline = get_contract(metric).get("pipeline", "pipeline")
     except Exception:  # noqa: BLE001
         pipeline = "pipeline"
-    _TXN_SEQ["run"] += 1
-    run_id = f"manual__{date}T08-00-{_TXN_SEQ['run']:02d}"
     d = _dispatch("airflow_trigger_dag", {"dag_id": pipeline, "run_date": date})
+    payload = (d.get("raw") or {}).get("data") or {}
+    run_id = payload.get("run_id") or "(triggered)"
+    state = payload.get("state") or "queued"
+    live = bool(payload.get("run_id"))
     steps = [
         {"name": "airflow_trigger_dag", "tier": "L3", "status": d["status"],
-         "detail": f"Airflow backfill triggered (governed via MCP) · dag={pipeline} · run_id={run_id} · state=success.",
+         "detail": (f"Airflow backfill {'(LIVE)' if live else ''} · dag={pipeline} · "
+                    f"run_id={run_id} · state={state} · conf.backfill_date={date}."),
          "link": "dag"},
     ]
     audit = [f"{ap_id} approved by Trâm Đ. (Data Engineer)",
@@ -818,7 +896,12 @@ def decide_approval(ap_id: str, body: ApprovalDecision) -> dict[str, Any]:
                     inv["status"] = "resolved"
                     inv["approval_status"] = "approved"
             else:
-                ap["action_result"] = _apply_mr(inv, ap_id) if inv else fixtures.action_result_for(ap_id)
+                ar = _apply_mr(inv, ap_id) if inv else fixtures.action_result_for(ap_id)
+                ap["action_result"] = ar
+                # remember the MR + next approval so we can live-poll the merge state
+                ap["mr_iid"] = ar.get("mr_iid")
+                ap["mr_web_url"] = ar.get("mr_web_url")
+                ap["rerun_approval_id"] = ar.get("next_approval")
                 # investigation now awaits the re-run approval (set inside _apply_mr)
         except Exception:  # noqa: BLE001 — never block the UI on a dispatch hiccup
             ap["action_result"] = fixtures.action_result_for(ap_id)
@@ -835,6 +918,36 @@ def decide_approval(ap_id: str, body: ApprovalDecision) -> dict[str, Any]:
 @app.get("/api/integrations")
 def integrations() -> list[dict[str, Any]]:
     return _STORE["integrations"]
+
+
+@app.get("/api/integrations/health")
+def integrations_health() -> dict[str, Any]:
+    """LIVE MCP connection check: for each declared server, spawn it and list its tools.
+    Tells the UI whether GitLab/Airflow are genuinely reachable (not fixtures)."""
+    import asyncio
+    from orchestration.mcp_transport import RealMCPTransport, build_servers_from_env
+    servers = build_servers_from_env()
+    out: dict[str, Any] = {"mcp_live": _MCP_LIVE, "servers": []}
+    declared = {"gitlab", "airflow"}
+    if servers:
+        transport = RealMCPTransport(servers)
+        for name in declared:
+            if name not in servers:
+                out["servers"].append({"name": name, "enabled": False, "connected": False,
+                                       "detail": f"{name.upper()}_MCP_ENABLED not set"})
+                continue
+            rec = {"name": name, "enabled": True, "connected": False, "tools": [], "detail": ""}
+            try:
+                tools = asyncio.run(asyncio.wait_for(transport.list_tools(name), 25))
+                rec["connected"] = True
+                rec["tools"] = tools
+            except Exception as exc:  # noqa: BLE001
+                rec["detail"] = f"{type(exc).__name__}: {str(exc)[:180]}"
+            out["servers"].append(rec)
+    else:
+        out["servers"] = [{"name": n, "enabled": False, "connected": False,
+                           "detail": f"{n.upper()}_MCP_ENABLED not set (FakeTransport)"} for n in declared]
+    return out
 
 
 @app.get("/api/catalog")
@@ -868,14 +981,35 @@ def catalog() -> list[dict[str, Any]]:
     return out
 
 
+def _airflow_last_run(dag_id: str) -> dict[str, Any]:
+    """Read the latest REAL Airflow run for a dag (direct REST, short timeout). {} if unavailable."""
+    import base64
+    import json
+    import urllib.request
+    base = os.getenv("AIRFLOW_BASE_URL", "")
+    if not base:
+        return {}
+    auth = base64.b64encode(f"{os.getenv('AIRFLOW_USERNAME','admin')}:{os.getenv('AIRFLOW_PASSWORD','admin')}".encode()).decode()
+    try:
+        req = urllib.request.Request(
+            f"{base}/dags/{dag_id}/dagRuns?order_by=-execution_date&limit=1",
+            headers={"Authorization": f"Basic {auth}"})
+        with urllib.request.urlopen(req, timeout=3) as r:
+            runs = json.load(r).get("dag_runs", [])
+        return runs[0] if runs else {}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 @app.get("/api/dags")
 def dags() -> list[dict[str, Any]]:
-    """One daily pipeline DAG per project, status derived from its open investigations and
-    LINKED to the triggering investigation (click-through)."""
+    """One daily pipeline DAG per project, LINKED to the triggering investigation. When Airflow
+    is live, the last-run state/id is the REAL value from the Airflow REST API."""
     from api.catalog import DOMAIN_META
     from domain.contracts import get_contract
     invs = _STORE["investigations"]
     sla = {"revenue": "04:00", "cash_flow": "03:00", "spend": "05:00", "ar": "06:00"}
+    airflow_on = os.getenv("AIRFLOW_MCP_ENABLED") == "1"
     out = []
     for key, meta in DOMAIN_META.items():
         try:
@@ -885,12 +1019,21 @@ def dags() -> list[dict[str, Any]]:
         dom_invs = [i for i in invs if i.get("domain") == key and i.get("status") != "resolved"]
         lead = next((i for i in dom_invs if i.get("status") == "needs_approval"), dom_invs[0] if dom_invs else None)
         status = "failed" if any(i.get("status") in ("needs_approval", "escalated") for i in dom_invs) else "success"
+        last, run_id, live = "today", None, False
+        if airflow_on:
+            lr = _airflow_last_run(pipeline)
+            if lr:
+                live = True
+                run_id = lr.get("dag_run_id")
+                last = (lr.get("end_date") or lr.get("start_date") or "")[:19].replace("T", " ")
+                if lr.get("state") == "success" and status != "failed":
+                    status = "success"
         out.append({
             "id": pipeline, "project": meta["label"], "owner": meta["owner"], "sla": sla.get(key, "—"),
-            "last": "today", "runtime": "—", "success": f"{max(70, 100 - len(dom_invs)*4)}%",
-            "status": status,
-            "alert": lead["title"] if lead else "",
+            "last": last, "runtime": "—", "success": f"{max(70, 100 - len(dom_invs)*4)}%",
+            "status": status, "alert": lead["title"] if lead else "",
             "investigation_id": lead["id"] if lead else None,
+            "airflow_live": live, "last_run_id": run_id,
         })
     return out
 

@@ -69,11 +69,16 @@ function ApprovalDrawer({ a, busy, onDecide, onGoApproval }: { a: Approval; busy
             <button className="btn" disabled={busy} onClick={() => onDecide("needs_revision")}>Request changes</button>
           </div>
         ) : <div style={{ marginTop: 16 }}><Badge>{a.status}</Badge></div>}
+        {a.mr_merged && a.rerun_approval_id && (
+          <div className="note ok" style={{ marginTop: 14 }}><Icon d={ICONS.check} />
+            <div><b>MR merged on GitLab ✓</b> — recompute the metric on the fix.
+              <div><button className="btn primary sm" style={{ marginTop: 8 }} onClick={() => onGoApproval(a.rerun_approval_id!)}>Approve DAG re-run →</button></div></div></div>
+        )}
       </Panel>
 
       {a.action_result && (
-        <Panel title="Action result" sub={a.action_result.mode === "stage1_mr_merged"
-          ? "create MR → reviewer merged → propose DAG re-run (approve below)"
+        <Panel title="Action result" sub={a.action_result.mode === "stage1_mr_created"
+          ? "create MR (live) → merge on GitLab → approve DAG re-run below"
           : "trigger Airflow → re-validate → notify → memory write-back"}>
           {a.action_result.steps.length === 0
             ? <div className="note bad">No side effects — {a.status}. Memory not written.</div>
@@ -89,6 +94,7 @@ function ApprovalDrawer({ a, busy, onDecide, onGoApproval }: { a: Approval; busy
                           <div className="ds">{s.detail}{" "}
                             {s.link?.startsWith("approval:") && <button className="btn sm" style={{ marginTop: 6 }} onClick={() => onGoApproval(s.link!.split(":")[1])}>Go to re-run approval →</button>}
                             {s.link === "dag" && <Link href={`/investigations/${a.investigation_id}`} style={{ color: "var(--accent)", fontWeight: 600 }}>View Airflow run / DAG →</Link>}
+                            {s.link?.startsWith("http") && <a href={s.link} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", fontWeight: 600 }}>Open MR on GitLab ↗</a>}
                           </div></div>
                         <span />
                       </div>

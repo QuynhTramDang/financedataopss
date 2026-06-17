@@ -1,7 +1,7 @@
 // API client for the FastAPI control-plane boundary (api/server.py).
 
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000";
+  process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000";
 
 async function get<T>(path: string): Promise<T> {
   const r = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
@@ -64,6 +64,7 @@ export interface Approval {
   validation: string; status: string;
   action_result?: { steps: ActionStep[]; audit: string[]; mode?: string } | null;
   investigation_title?: string; investigation_status?: string; domain?: string;
+  stage?: string; mr_merged?: boolean; mr_web_url?: string; rerun_approval_id?: string;
 }
 
 export interface Overview {
@@ -73,6 +74,10 @@ export interface Overview {
 }
 
 export interface Integration { name: string; type: string; status: string; auth: string; scopes: string; calls: string; error_rate: string; note: string; }
+export interface McpHealth {
+  mcp_live: boolean;
+  servers: { name: string; enabled: boolean; connected: boolean; tools?: string[]; detail?: string }[];
+}
 export interface CatalogItem { name: string; kind: string; owner: string; status: string; definition: string; sources: string[]; lineage: string[]; contract_tests: { name: string; status: string }[]; domain?: string; investigations?: number; }
 export interface Dag { id: string; status: string; owner: string; sla: string; last: string; runtime: string; success: string; alert: string; project?: string; investigation_id?: string | null; }
 export interface Governance {
@@ -112,6 +117,7 @@ export const api = {
   approvals: () => get<Approval[]>("/api/approvals"),
   decide: (id: string, decision: string) => post<Approval>(`/api/approvals/${id}`, { decision }),
   integrations: () => get<Integration[]>("/api/integrations"),
+  mcpHealth: () => get<McpHealth>("/api/integrations/health"),
   catalog: () => get<CatalogItem[]>("/api/catalog"),
   dags: () => get<Dag[]>("/api/dags"),
   governance: () => get<Governance>("/api/governance"),

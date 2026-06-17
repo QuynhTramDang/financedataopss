@@ -50,5 +50,81 @@
       "Data Owner"
     ],
     "created_from": "human_approved_rca"
+  },
+  {
+    "incident_id": "INC-2026-06-04-net_receivable",
+    "metric": "net_receivable",
+    "anomaly_type": "enum_drift",
+    "issue": "net_receivable mismatch caused by new ar_status ['DISPUTE_CREDIT']",
+    "symptom": "net_receivable overstated",
+    "root_cause": "Source has new value(s) ['DISPUTE_CREDIT'], but None only handles [], causing net_receivable to be overstated.",
+    "fix": null,
+    "related_pipeline": "dtm_ar_daily",
+    "diagnostic_steps": [
+      "metadata_scan",
+      "sql_profile",
+      "freshness_check",
+      "volume_check",
+      "null_check",
+      "duplicate_check",
+      "distribution_drift_check",
+      "lineage_lookup",
+      "enum_drift_check"
+    ],
+    "runbook_tools": [
+      "metadata_scan",
+      "sql_profile",
+      "freshness_check",
+      "volume_check",
+      "null_check",
+      "duplicate_check",
+      "distribution_drift_check",
+      "lineage_lookup",
+      "enum_drift_check"
+    ],
+    "approval_required": [
+      "Finance Owner",
+      "Data Owner"
+    ],
+    "created_from": "human_approved_rca"
+  },
+  {
+    "incident_id": "INC-2026-06-07-net_revenue",
+    "metric": "net_revenue",
+    "anomaly_type": "enum_drift",
+    "issue": "net_revenue mismatch caused by new refund_status ['PARTIAL_REFUND']",
+    "symptom": "net_revenue overstated",
+    "root_cause": "Source has new value(s) ['PARTIAL_REFUND'], but pipelines/models/ods/ods_payment_enriched.sql only handles ['REFUNDED'], causing net_revenue to be overstated.",
+    "fix": "WHEN d.refund_status in ('PARTIAL_REFUND', 'REFUNDED') THEN d.refunded_amount",
+    "related_pipeline": "dtm_revenue_daily",
+    "diagnostic_steps": [
+      "metadata_scan",
+      "sql_profile",
+      "freshness_check",
+      "volume_check",
+      "null_check",
+      "duplicate_check",
+      "distribution_drift_check",
+      "code_search",
+      "lineage_lookup",
+      "enum_drift_check"
+    ],
+    "runbook_tools": [
+      "metadata_scan",
+      "sql_profile",
+      "freshness_check",
+      "volume_check",
+      "null_check",
+      "duplicate_check",
+      "distribution_drift_check",
+      "code_search",
+      "lineage_lookup",
+      "enum_drift_check"
+    ],
+    "approval_required": [
+      "Finance Owner",
+      "Data Owner"
+    ],
+    "created_from": "human_approved_rca"
   }
 ]
