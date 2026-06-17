@@ -1,0 +1,22 @@
+# Core orchestration
+langgraph>=0.2.0
+langchain-core>=0.3.0
+
+# LLM providers
+anthropic>=0.40.0
+openai>=1.40.0          # dùng cho model nhỏ qua endpoint OpenAI-compatible (Qwen/Gemma: Ollama, OpenRouter, ...)
+
+# UI
+streamlit>=1.38.0
+
+# MCP integration (M1+) — chỉ cần khi bật RealMCPTransport; test/CI dùng FakeTransport không cần
+mcp>=1.0.0
+
+# Validation / config
+pydantic>=2.7.0
+jsonschema>=4.21.0
+PyYAML>=6.0
+python-dotenv>=1.0.0
+
+# Test
+pytest>=8.0.0

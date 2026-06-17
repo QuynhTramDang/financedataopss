@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Finance DataOps Console</title>
+  <style>
+    :root {
+      /* neutral base — color carries meaning, not decoration */
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --panel-2: #fbfcfd;
+      --ink: #0f172a;
+      --ink-2: #334155;
+      --muted: #64748b;
+      --faint: #94a3b8;
+      --line: #e6e9ee;
+      --soft: #eef1f5;
+      /* single accent */
+      --accent: #2563eb;
+      --accent-soft: #eff5ff;
+      /* status — restrained, meaningful */
+      --ok: #15803d;     --ok-soft: #ecfdf3;
+      --warn: #b45309;   --warn-soft: #fff8eb;
+      --bad: #be123c;    --bad-soft: #fef2f4;
+      --neutral: #475569; --neutral-soft: #f1f5f9;
+      --shadow: 0 1px 2px rgba(15,23,42,.05);
+      --shadow-lg: 0 1px 2px rgba(15,23,42,.06), 0 16px 40px rgba(15,23,42,.06);
+      --r: 10px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background: var(--bg); color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-size: 14px; -webkit-font-smoothing: antialiased;
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+
+    .app { min-height: 100vh; display: grid; grid-template-columns: 244px 1fr; }
+
+    /* ── Sidebar ── */
+    .side { position: sticky; top: 0; height: 100vh; background: #0c1320; color: #cbd5e1;
+            display: flex; flex-direction: column; overflow: hidden; }
+    .brand { padding: 18px 18px 14px; display: flex; gap: 11px; align-items: center;
+             border-bottom: 1px solid rgba(255,255,255,.07); }
+    .brand .mk { width: 32px; height: 32px; border-radius: 8px;
+                 background: linear-gradient(135deg,#2563eb,#1d4ed8); color: #fff;
+                 display: grid; place-items: center; font-weight: 800; font-size: 15px; }
+    .brand h1 { margin: 0; font-size: 13.5px; color: #fff; line-height: 1.15; }
+    .brand p { margin: 2px 0 0; font-size: 11px; color: #64748b; }
+    .nav { padding: 10px 8px; display: grid; gap: 1px; overflow-y: auto; }
+    .nav .sec { font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+                color: #475569; padding: 12px 10px 5px; font-weight: 700; }
+    .nav button { width: 100%; text-align: left; background: transparent; border: 0;
+                  color: #94a3b8; padding: 8px 10px; border-radius: 7px; font-size: 13px;
+                  font-weight: 550; display: flex; gap: 10px; align-items: center; }
+    .nav button:hover { background: rgba(255,255,255,.05); color: #e2e8f0; }
+    .nav button.active { background: rgba(37,99,235,.16); color: #fff; }
+    .nav button.active svg { color: #60a5fa; }
+    .nav svg { width: 16px; height: 16px; flex: 0 0 auto; color: #64748b; }
+    .nav .pill { margin-left: auto; font-size: 10.5px; font-weight: 800; padding: 1px 7px;
+                 border-radius: 999px; background: rgba(190,18,60,.22); color: #fda4af; }
+    .nav .pill.amber { background: rgba(180,83,9,.22); color: #fcd34d; }
+    .side-foot { margin-top: auto; padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.07);
+                 font-size: 11px; color: #64748b; display: flex; align-items: center; gap: 8px; }
+    .side-foot .dot { width: 7px; height: 7px; border-radius: 999px; background: #22c55e; }
+
+    /* ── Topbar ── */
+    .main { min-width: 0; }
+    .top { position: sticky; top: 0; z-index: 20; background: rgba(247,248,250,.82);
+           backdrop-filter: blur(12px); border-bottom: 1px solid var(--line);
+           padding: 11px 26px; display: flex; align-items: center; gap: 12px; }
+    .search { flex: 0 1 460px; display: flex; align-items: center; gap: 8px; background: var(--panel);
+              border: 1px solid var(--line); border-radius: 9px; padding: 7px 11px; color: var(--muted); }
+    .search input { border: 0; outline: 0; background: transparent; width: 100%; color: var(--ink); }
+    .sel { border: 1px solid var(--line); background: var(--panel); border-radius: 9px;
+           padding: 7px 10px; color: var(--ink-2); font-weight: 550; }
+    .top .spacer { margin-left: auto; }
+    .iconbtn { width: 36px; height: 36px; border: 1px solid var(--line); background: var(--panel);
+               border-radius: 9px; display: grid; place-items: center; position: relative; color: var(--muted); }
+    .iconbtn .nb { position: absolute; top: -4px; right: -4px; background: var(--bad); color: #fff;
+                   font-size: 10px; font-weight: 800; border-radius: 999px; padding: 0 5px; line-height: 16px; }
+    .who { display: flex; align-items: center; gap: 9px; padding: 4px 6px 4px 4px; border: 1px solid var(--line);
+           background: var(--panel); border-radius: 999px; }
+    .who .av { width: 28px; height: 28px; border-radius: 999px; background: #1e293b; color: #fff;
+               display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+    .who small { color: var(--muted); font-size: 12px; }
+
+    /* ── Content layout ── */
+    .content { padding: 24px 26px 56px; max-width: 1500px; }
+    .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
+    .head .crumb { font-size: 12px; color: var(--faint); margin-bottom: 6px; }
+    .head h2 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
+    .head p { margin: 6px 0 0; color: var(--muted); max-width: 720px; line-height: 1.5; }
+    .head .actions { display: flex; gap: 8px; flex: 0 0 auto; }
+
+    .btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink-2);
+           border-radius: 8px; padding: 8px 13px; font-size: 13px; font-weight: 650; }
+    .btn:hover { border-color: #cbd5e1; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: var(--shadow); }
+    .btn.primary:hover { background: #1d4ed8; }
+    .btn.ok { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .btn.bad { background: #fff; border-color: #fecdd3; color: var(--bad); }
+    .btn.sm { padding: 5px 10px; font-size: 12px; }
+
+    .grid { display: grid; gap: 16px; }
+    .c4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    .c3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .c2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .main-side { grid-template-columns: minmax(0,1.5fr) minmax(330px,.55fr); }
+
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
+    .ph { padding: 13px 16px; border-bottom: 1px solid var(--soft); display: flex;
+          align-items: center; justify-content: space-between; gap: 10px; }
+    .ph h3 { margin: 0; font-size: 13.5px; font-weight: 700; }
+    .ph .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .ph .link { color: var(--accent); font-size: 12.5px; font-weight: 650; background: none; border: 0; }
+    .pb { padding: 14px 16px; }
+    .pb.flush { padding: 0; }
+
+    /* metric */
+    .metric { padding: 15px 16px; }
+    .metric .k { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+    .metric .v { font-size: 26px; font-weight: 750; letter-spacing: -.02em; margin-top: 6px; line-height: 1; }
+    .metric .d { margin-top: 7px; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+    .trend.up { color: var(--ok); } .trend.down { color: var(--bad); }
+
+    /* badges */
+    .badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; padding: 3px 8px;
+             font-size: 11.5px; font-weight: 700; white-space: nowrap; line-height: 1.4; }
+    .badge .d { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+    .b-ok { color: var(--ok); background: var(--ok-soft); }
+    .b-warn { color: var(--warn); background: var(--warn-soft); }
+    .b-bad { color: var(--bad); background: var(--bad-soft); }
+    .b-acc { color: var(--accent); background: var(--accent-soft); }
+    .b-neu { color: var(--neutral); background: var(--neutral-soft); }
+
+    /* worklist rows */
+    .list { display: grid; }
+    .item { padding: 13px 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 12px;
+            align-items: center; border-bottom: 1px solid var(--soft); cursor: pointer; }
+    .item:last-child { border-bottom: 0; }
+    .item:hover { background: var(--panel-2); }
+    .item .lead { width: 4px; align-self: stretch; border-radius: 999px; background: var(--line); }
+    .item.high .lead { background: var(--bad); }
+    .item.med .lead { background: var(--warn); }
+    .item .t { font-size: 13.5px; font-weight: 650; }
+    .item .s { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .item .r { display: flex; gap: 7px; align-items: center; }
+
+    /* tables */
+    table { width: 100%; border-collapse: collapse; }
+    thead th { color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+               text-align: left; font-weight: 700; padding: 11px 16px; border-bottom: 1px solid var(--soft); }
+    tbody td { padding: 12px 16px; border-bottom: 1px solid var(--soft); font-size: 13px; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr.clk { cursor: pointer; }
+    tbody tr.clk:hover td { background: var(--panel-2); }
+    .mono { font-family: "SFMono-Regular", ui-monospace, Consolas, monospace; font-size: 12px; color: var(--ink-2); }
+    .cellsub { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+
+    /* drawer */
+    .drawer { position: sticky; top: 70px; align-self: start; }
+    .empty { padding: 40px 22px; text-align: center; color: var(--muted); }
+    .empty .ic { width: 40px; height: 40px; margin: 0 auto 12px; border-radius: 10px; background: var(--soft);
+                 display: grid; place-items: center; color: var(--faint); }
+    .empty p { margin: 0; line-height: 1.5; font-size: 13px; }
+
+    /* key/value */
+    .kv { display: grid; gap: 0; }
+    .kv > div { display: flex; justify-content: space-between; gap: 14px; padding: 9px 0;
+                border-bottom: 1px dashed var(--soft); font-size: 12.5px; }
+    .kv > div:last-child { border-bottom: 0; }
+    .kv .k { color: var(--muted); }
+    .kv .v { font-weight: 650; text-align: right; }
+
+    /* tabs */
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+    .tabs button { border: 0; background: none; padding: 9px 11px; font-weight: 650; font-size: 13px;
+                   color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .tabs button.active { color: var(--accent); border-color: var(--accent); }
+
+    /* trace tree */
+    .trace { display: grid; }
+    .tstage { border-bottom: 1px solid var(--soft); }
+    .tstage:last-child { border-bottom: 0; }
+    .tstage-h { display: grid; grid-template-columns: 26px 1fr auto; gap: 11px; align-items: center;
+                padding: 12px 0; }
+    .tnode { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center;
+             font-size: 11px; font-weight: 800; background: var(--neutral-soft); color: var(--neutral); }
+    .tstage.ok .tnode { background: var(--ok-soft); color: var(--ok); }
+    .tstage.warn .tnode { background: var(--warn-soft); color: var(--warn); }
+    .tstage.bad .tnode { background: var(--bad-soft); color: var(--bad); }
+    .tstage-h .nm { font-weight: 700; font-size: 13px; }
+    .tstage-h .ds { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .tsub { padding: 0 0 12px 37px; display: grid; gap: 7px; }
+    .tcall { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+             border: 1px solid var(--soft); border-radius: 8px; padding: 9px 11px; background: var(--panel-2); }
+    .tcall .nm { font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .tcall .meta { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+
+    /* evidence cards */
+    .evi { display: grid; gap: 8px; }
+    .evcard { border: 1px solid var(--soft); border-radius: 9px; padding: 11px 12px; background: var(--panel-2); }
+    .evcard .top { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .evcard .ty { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .03em; }
+    .evcard .bd { font-size: 12.5px; margin-top: 6px; line-height: 1.5; color: var(--ink-2); }
+
+    /* diff */
+    .diff { border: 1px solid var(--line); border-radius: 9px; overflow: hidden; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+    .diff .ln { padding: 4px 12px; white-space: pre-wrap; }
+    .diff .del { background: var(--bad-soft); color: #9f1239; }
+    .diff .add { background: var(--ok-soft); color: #166534; }
+    .diff .ctx { color: var(--muted); }
+
+    /* canvas / flow */
+    .flow { display: grid; grid-auto-flow: column; align-items: stretch; gap: 8px; overflow-x: auto;
+            padding: 14px; background: var(--panel-2); border: 1px solid var(--soft); border-radius: var(--r); }
+    .fnode { background: #fff; border: 1px solid var(--line); border-radius: 9px; padding: 11px 12px;
+             min-width: 150px; box-shadow: var(--shadow); }
+    .fnode b { font-size: 12.5px; display: block; }
+    .fnode span { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; line-height: 1.4; }
+    .farr { align-self: center; color: var(--faint); font-weight: 800; }
+
+    /* callout */
+    .note { display: flex; gap: 10px; padding: 11px 13px; border-radius: 9px; font-size: 12.5px; line-height: 1.5; }
+    .note.warn { background: var(--warn-soft); color: #92400e; }
+    .note.acc { background: var(--accent-soft); color: #1e40af; }
+    .note.bad { background: var(--bad-soft); color: #9f1239; }
+
+    /* agent context block (not a chat panel) */
+    .agent { border: 1px solid var(--accent-soft); background: linear-gradient(180deg,#fbfdff,#fff);
+             border-radius: var(--r); }
+    .agent .ah { padding: 11px 14px; display: flex; align-items: center; gap: 9px; border-bottom: 1px solid var(--soft); }
+    .agent .spark { width: 24px; height: 24px; border-radius: 7px; background: var(--accent-soft); color: var(--accent);
+                    display: grid; place-items: center; }
+    .agent .ah b { font-size: 13px; } .agent .ah small { color: var(--muted); margin-left: auto; font-size: 11.5px; }
+
+    .meterbar { height: 6px; border-radius: 999px; background: var(--soft); overflow: hidden; }
+    .meterbar > i { display: block; height: 100%; border-radius: 999px; }
+
+    @media (max-width: 1080px) {
+      .app { grid-template-columns: 1fr; }
+      .side { position: relative; height: auto; }
+      .nav { grid-auto-flow: column; overflow-x: auto; }
+      .nav .sec { display: none; }
+      .c4,.c3,.c2,.main-side { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand">
+        <div class="mk">F</div>
+        <div><h1>Finance DataOps</h1><p>Governed automation console</p></div>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="side-foot"><span class="dot"></span>Control plane · governed execution</div>
+    </aside>
+
+    <main class="main">
+      <div class="top">
+        <label class="search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input placeholder="Search runs, automations, connectors, metrics…" />
+        </label>
+        <select class="sel"><option>Production</option><option>Staging</option></select>
+        <select class="sel"><option>Last 24 hours</option><option>Last 7 days</option><option>Last 30 days</option></select>
+        <span class="spacer"></span>
+        <button class="iconbtn" title="Notifications"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span class="nb">3</span></button>
+        <div class="who"><span class="av">TD</span><div><div style="font-size:12.5px;font-weight:650">Trâm Đ.</div><small>Data Engineer</small></div></div>
+      </div>
+      <section class="content" id="view"></section>
+    </main>
+  </div>
+
+  <script>
+  /* ───────────────────────── DATA (grounded in the real project) ───────────────────────── */
+  const NAV = [
+    { sec: "Operate" },
+    ["overview","Overview","M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z"],
+    ["automations","Automations","M4 7h4v4H4zM16 7h4v4h-4zM4 17h4v4H4zM8 9h4a4 4 0 0 1 4 4v3"],
+    ["runs","Runs & Traces","M4 6h16M4 12h10M4 18h7"],
+    { sec: "Decide", badgeFor: "approvals" },
+    ["approvals","Approvals","M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z M9 12l2 2 4-5"],
+    ["incidents","Incidents","M12 3 2 21h20zM12 9v5M12 18h.01"],
+    { sec: "Govern" },
+    ["integrations","Integrations","M9 7H7a5 5 0 0 0 0 10h2m6-10h2a5 5 0 0 1 0 10h-2M8 12h8"],
+    ["catalog","Catalog","M5 4h13v16H6a2 2 0 0 1-1-2zM8 8h7M8 12h7"],
+    ["governance","Governance","M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"],
+  ];
+
+  const KPI = [
+    { k: "Active automations", v: "4", d: "1 paused", trend: "" },
+    { k: "Runs today", v: "184", d: "96.1% success", trend: "up" },
+    { k: "Pending approvals", v: "3", d: "all L2 assisted", trend: "" },
+    { k: "Connector health", v: "4 / 5", d: "1 degraded", trend: "down" },
+  ];
+
+  const ATTENTION = [
+    { sev:"high", t:"Approve revenue fix · net_revenue overstated 2.1%", s:"Verified evidence · gated L2 patch waiting for Finance", badge:["L2","12 min"], go:"incidents" },
+    { sev:"high", t:"Investigate failed DAG · daily_orders_pipeline", s:"Schema drift — required column order_channel added upstream", badge:["high"], go:"incidents" },
+    { sev:"med",  t:"Google Sheets connector degraded", s:"8.7% error rate over last 24h — OAuth scope check needed", badge:["degraded"], go:"integrations" },
+    { sev:"med",  t:"Automation paused · Sheet reconciliation intake", s:"Auto-paused after 3 repeated auth failures — needs owner review", badge:["paused"], go:"automations" },
+  ];
+
+  const AUTOMATIONS = [
+    { id:"auto_revenue_mismatch_triage", name:"Revenue mismatch triage", trig:"Finance alert / 04:15 schedule", apps:["Airflow","GitLab","Teams"], status:"active", risk:"L2", owner:"finance-data", success:"96%", last:"12 min ago" },
+    { id:"auto_failed_dag_router",       name:"Failed DAG router",       trig:"Airflow task_failed", apps:["Airflow","Teams"], status:"active", risk:"L3", owner:"data-platform", success:"91%", last:"23 min ago" },
+    { id:"auto_schema_change_review",    name:"Schema change review",    trig:"GitLab MR opened", apps:["GitLab","Catalog"], status:"active", risk:"L2", owner:"data-platform", success:"98%", last:"35 min ago" },
+    { id:"auto_sheet_recon_intake",      name:"Sheet reconciliation intake", trig:"Google Sheet updated", apps:["Sheets","Email","GitLab"], status:"paused", risk:"L2", owner:"finance-ops", success:"88%", last:"2h ago" },
+  ];
+
+  const RUNS = [
+    { id:"run_24891", auto:"Revenue mismatch triage", status:"waiting approval", dur:"42s", trig:"Finance alert", failed:"", tok:"18.2k", cost:"$0.11", at:"12 min ago" },
+    { id:"run_24890", auto:"Failed DAG router",       status:"success",          dur:"18s", trig:"Airflow failure", failed:"", tok:"6.1k", cost:"$0.04", at:"23 min ago" },
+    { id:"run_24889", auto:"Sheet reconciliation intake", status:"failed",       dur:"31s", trig:"Sheet update", failed:"Google Sheets MCP · credential missing", tok:"3.4k", cost:"$0.02", at:"2h ago" },
+    { id:"run_24888", auto:"Schema change review",    status:"success",          dur:"54s", trig:"GitLab MR", failed:"", tok:"24.7k", cost:"$0.16", at:"3h ago" },
+    { id:"run_24887", auto:"Failed DAG router",       status:"retry scheduled",  dur:"—",   trig:"Airflow failure", failed:"transient 429 · retry in 4m", tok:"2.0k", cost:"$0.01", at:"3h ago" },
+  ];
+
+  // trace for run_24891 — Planner → Executor → Verifier → Decision (LangGraph)
+  const TRACE = [
+    { st:"ok", node:"PLAN", name:"Planner", ds:"Classified intent=metric_mismatch · risk L2 · scope net_revenue 2026-06-07", dur:"1.8s", calls:[
+        { ok:"ok", nm:"intent_classifier", meta:"model=small · intent=metric_mismatch · confidence 0.93", dur:"320ms" },
+        { ok:"ok", nm:"context_retriever", meta:"hybrid RAG · runbook_revenue_mismatch + 2 prior incidents", dur:"540ms" },
+        { ok:"ok", nm:"plan generated", meta:"4 steps: sql_profile · enum_drift · code_search · impact_simulation", dur:"940ms" },
+    ]},
+    { st:"ok", node:"EXEC", name:"Tool Executor", ds:"Governed registry · 4/4 tools succeeded · 0 raw rows to LLM", dur:"12.4s", calls:[
+        { ok:"ok", nm:"sql_profile · revenue_daily", meta:"L1 read-only · mismatch 2.10% measured from SQL", dur:"3.1s" },
+        { ok:"ok", nm:"enum_drift · refund_status", meta:"L1 · new value PARTIAL_REFUND (4.2% of rows)", dur:"2.0s" },
+        { ok:"ok", nm:"code_search · revenue_daily.sql (GitLab MCP)", meta:"L1 · mapping subtracts only WHEN refund_status='REFUNDED'", dur:"4.6s" },
+        { ok:"ok", nm:"impact_simulation", meta:"L1 · affected_amount 210,000,000 VND", dur:"2.7s" },
+    ]},
+    { st:"ok", node:"CHK", name:"Verifier / Critic", ds:"4 claims extracted · 4 verified by rule engine · 0 contradictions", dur:"4.9s", calls:[
+        { ok:"ok", nm:"claim_verifier", meta:"3/3 numeric claims reconcile with measured values", dur:"3.2s" },
+        { ok:"ok", nm:"contradiction_check", meta:"no conflict with prior incidents in memory", dur:"1.7s" },
+    ]},
+    { st:"warn", node:"DEC", name:"Decision Router", ds:"Patch is narrow & validated, but changes a revenue metric → gate for human approval", dur:"90ms", calls:[
+        { ok:"warn", nm:"action_policy.check", meta:"create_gitlab_mr → tier L2 → APPROVAL REQUIRED", dur:"40ms" },
+    ]},
+  ];
+
+  const APPROVALS = [
+    { id:"ap_1042", title:"Create GitLab MR — refund mapping fix", auto:"Revenue mismatch triage", risk:"L2",
+      impact:"net_revenue · finance_revenue_report", age:"12 min",
+      why:"revenue_daily.sql subtracts refunded_amount only WHEN refund_status='REFUNDED'. Source added PARTIAL_REFUND (4.2% of rows), which is never subtracted → net_revenue overstated 2.1%.",
+      rollback:"Revert MR · revenue_daily is recomputed each run, no destructive migration.",
+      validation:"Reconciliation before fix 2.10% → after fix 0.00%. Generated dbt accepted_values test catches the old bug and passes after patch.",
+      evidence:[
+        ["enum_drift","refund_status gained value PARTIAL_REFUND — 4.2% of 2026-06-07 rows"],
+        ["code_search","mapping handles only REFUNDED in revenue_daily.sql:118"],
+        ["impact_simulation","affected_amount = 210,000,000 VND on net_revenue"],
+        ["reconciliation","measured mismatch 2.10% vs payment dashboard"],
+      ],
+      diff:[
+        ["ctx","-- revenue_daily.sql"],
+        ["del","WHEN refund_status = 'REFUNDED'"],
+        ["del","  THEN amount - refunded_amount"],
+        ["add","WHEN refund_status IN ('REFUNDED','PARTIAL_REFUND')"],
+        ["add","  THEN amount - refunded_amount"],
+        ["ctx","ELSE amount END AS net_amount"],
+      ]},
+    { id:"ap_1041", title:"Send Teams incident summary to Finance", auto:"Sheet reconciliation intake", risk:"L2",
+      impact:"Finance channel notification", age:"48 min",
+      why:"Draft RCA summary ready to notify the Finance channel before month-close.",
+      rollback:"Message is a draft until approved — nothing sent yet.",
+      validation:"Summary cites verified evidence only; numbers match reconciliation.",
+      evidence:[["draft","RCA summary generated, awaiting send approval"]], diff:[] },
+    { id:"ap_1040", title:"Write RCA to incident memory", auto:"Revenue mismatch triage", risk:"L2",
+      impact:"Long-term incident memory (learning)", age:"1h",
+      why:"Persist validated RCA so future similar mismatches retrieve this resolution.",
+      rollback:"Memory entry can be deleted; written only after validation passes.",
+      validation:"Write-back gated until patch validated — policy: memory only after approve.",
+      evidence:[["policy","memory write-back requires validated + approved run"]], diff:[] },
+  ];
+
+  const INCIDENTS = [
+    { id:"inc_0607", title:"net_revenue overstated by 2.1%", sev:"high", status:"needs approval", dag:"revenue_daily_dag", src:"Reconciliation check", date:"2026-06-07",
+      summary:"Source added refund_status=PARTIAL_REFUND, but revenue_daily.sql only subtracts when REFUNDED. Narrow patch verified; gated for Finance approval.",
+      mode:"patch proposed", confidence:"high" },
+    { id:"inc_0608", title:"amount null spike on stg_payment", sev:"med", status:"escalated", dag:"stg_payment_dag", src:"Null-rate monitor", date:"2026-06-08",
+      summary:"amount null_rate jumped to 40% on 2026-06-08 partition. Ingestion-quality issue, not a safe code patch → escalate to data-platform, block downstream publish.",
+      mode:"no patch · escalate", confidence:"medium" },
+    { id:"inc_orders", title:"daily_orders_pipeline schema drift", sev:"high", status:"draft fix", dag:"daily_orders_pipeline", src:"Airflow failed task", date:"2026-06-16",
+      summary:"Upstream raw.orders added required column order_channel; staging contract not updated. Draft GitLab MR to add column + not_null test, pending owner review.",
+      mode:"draft MR", confidence:"high" },
+  ];
+
+  const DAGS = [
+    { id:"revenue_daily_dag", status:"failed", owner:"finance-data", sla:"04:00", last:"today 04:01", rt:"0/80m", success:"86%", alert:"net_revenue overstated 2.1%" },
+    { id:"load_stripe_payments", status:"failed", owner:"data-platform", sla:"03:00", last:"today 03:02", rt:"0/120m", success:"71%", alert:"HTTP 429 after 3 retries" },
+    { id:"stg_payment_dag", status:"running", owner:"data-platform", sla:"03:30", last:"running", rt:"45/90m", success:"95%", alert:"" },
+    { id:"daily_orders_pipeline", status:"failed", owner:"orders-data", sla:"02:30", last:"today 02:31", rt:"0/60m", success:"80%", alert:"required column order_channel added" },
+    { id:"export_finance_report", status:"success", owner:"bi-team", sla:"05:00", last:"today 05:03", rt:"18/20m", success:"98%", alert:"" },
+  ];
+
+  const INTEGRATIONS = [
+    { name:"Airflow", type:"MCP", status:"healthy", auth:"service account", scopes:"read, retry (L3)", calls:"1,283", err:"0.4%", note:"" },
+    { name:"GitLab", type:"MCP", status:"healthy", auth:"project token", scopes:"read, draft MR (L2)", calls:"342", err:"0.2%", note:"" },
+    { name:"Microsoft Teams", type:"MCP", status:"attention", auth:"OAuth", scopes:"send draft, notify (L2)", calls:"97", err:"2.1%", note:"token expires in 3 days" },
+    { name:"Google Sheets", type:"MCP", status:"degraded", auth:"OAuth", scopes:"read ranges (L1)", calls:"211", err:"8.7%", note:"credential missing — re-auth required" },
+    { name:"Email", type:"MCP", status:"healthy", auth:"OAuth", scopes:"read inbox (L1)", calls:"423", err:"0.5%", note:"" },
+  ];
+
+  const POLICIES = [
+    ["L1 — read-only","Allowed","Catalog lookup, lineage, sql_profile, enum_drift, code_search"],
+    ["L2 — assisted","Approval required","Draft MR, write memory, send Teams/email update"],
+    ["L3 — reversible","Auto with audit","Retry transient job, refresh metadata"],
+    ["Production deploy","Blocked","No direct deploy from agent in MVP"],
+  ];
+
+  /* ───────────────────────── HELPERS ───────────────────────── */
+  const TONE = { active:"ok", success:"ok", healthy:"ok", verified:"ok",
+    paused:"warn", attention:"warn", pending:"warn", "waiting approval":"warn", "needs approval":"warn", "retry scheduled":"warn", "draft fix":"warn", "draft MR":"warn",
+    failed:"bad", degraded:"bad", high:"bad", escalated:"bad",
+    running:"acc", L2:"acc", med:"warn", medium:"warn", L1:"neu", L3:"ok" };
+  const ic = p => `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${p}"/></svg>`;
+  const badge = (txt, tone) => `<span class="badge b-${tone || TONE[txt] || "neu"}"><span class="d"></span>${txt}</span>`;
+  const metric = m => `<div class="panel metric"><div class="k">${m.k}</div><div class="v">${m.v}</div><div class="d ${m.trend?("trend "+m.trend):""}">${m.trend==="up"?"▲":m.trend==="down"?"▼":""} ${m.d}</div></div>`;
+  const panel = (title, sub, body, right="") =>
+    `<section class="panel"><div class="ph"><div><h3>${title}</h3>${sub?`<div class="sub">${sub}</div>`:""}</div>${right}</div><div class="pb${body.flush?" flush":""}">${body.html||body}</div></section>`;
+  const flush = html => ({ html, flush:true });
+  const head = (crumb, title, sub, actions="") =>
+    `<div class="head"><div><div class="crumb">${crumb}</div><h2>${title}</h2><p>${sub}</p></div><div class="actions">${actions}</div></div>`;
+
+  let state = { view:"overview", run:RUNS[0], appr:APPROVALS[0], inc:INCIDENTS[0], tab:0 };
+
+  /* ───────────────────────── NAV ───────────────────────── */
+  function renderNav(){
+    let html = "";
+    for (const n of NAV){
+      if (n.sec){ html += `<div class="sec">${n.sec}</div>`; continue; }
+      const [key,label,path] = n;
+      const pill = key==="approvals" ? `<span class="pill amber">3</span>` :
+                   key==="incidents" ? `<span class="pill">2</span>` : "";
+      html += `<button class="${state.view===key?"active":""}" onclick="go('${key}')">${ic(path)}${label}${pill}</button>`;
+    }
+    document.getElementById("nav").innerHTML = html;
+  }
+
+  /* ───────────────────────── VIEWS ───────────────────────── */
+  function vOverview(){
+    const att = ATTENTION.map(a =>
+      `<div class="item ${a.sev}" onclick="go('${a.go}')"><span class="lead"></span>
+        <div><div class="t">${a.t}</div><div class="s">${a.s}</div></div>
+        <div class="r">${a.badge.map(b=>badge(b)).join("")}</div></div>`).join("");
+    const health = AUTOMATIONS.map(a =>
+      `<div class="item" onclick="go('automations')"><span class="lead"></span>
+        <div><div class="t">${a.name}</div><div class="s">${a.trig} · owner ${a.owner} · ${a.success} success</div></div>
+        <div class="r">${badge(a.status)}${badge(a.risk)}</div></div>`).join("");
+    return head("Operate / Overview","Overview",
+      "What needs you first, then how the automations are running. One control surface — work, then context.",
+      `<button class="btn primary" onclick="go('automations')">New automation</button>`)
+      + `<div class="grid c4">${KPI.map(metric).join("")}</div>
+         <div class="grid main-side" style="margin-top:16px">
+           ${panel("Today's attention", "Work that needs a human action", flush(`<div class="list">${att}</div>`),
+                   `<button class="link" onclick="go('approvals')">All approvals →</button>`)}
+           ${panel("Automation health", "Workflows by recent activity", flush(`<div class="list">${health}</div>`))}
+         </div>`;
+  }
+
+  function vAutomations(){
+    const rows = AUTOMATIONS.map(a =>
+      `<tr class="clk" onclick="go('runs')"><td><strong>${a.name}</strong><div class="mono">${a.id}</div></td>
+        <td>${a.trig}</td><td>${a.apps.map(x=>badge(x,"neu")).join(" ")}</td><td>${a.owner}</td>
+        <td>${badge(a.risk)}</td><td>${badge(a.status)}</td><td>${a.success}</td></tr>`).join("");
+    const table = `<table><thead><tr><th>Automation</th><th>Trigger</th><th>Integrations</th><th>Owner</th><th>Risk</th><th>Status</th><th>Success</th></tr></thead><tbody>${rows}</tbody></table>`;
+    const blueprint = `<div class="flow">
+      <div class="fnode"><b>Trigger</b><span>Airflow task_failed / Finance alert</span></div><div class="farr">→</div>
+      <div class="fnode"><b>Plan</b><span>Classify failure, select tools</span></div><div class="farr">→</div>
+      <div class="fnode"><b>Execute</b><span>Governed registry: logs, lineage, code search</span></div><div class="farr">→</div>
+      <div class="fnode"><b>Verify</b><span>Claims + policy tier</span></div><div class="farr">→</div>
+      <div class="fnode"><b>Act</b><span>Retry · draft MR · request approval</span></div></div>`;
+    return head("Operate / Automations","Automations",
+      "Governed data workflows. Each has a trigger, a tool plan, integration scope, risk tier, and an owner.",
+      `<button class="btn primary">New automation</button>`)
+      + `<div class="grid">${panel("Inventory","Production workflows",flush(table))}
+          ${panel("Workflow blueprint","Read-only plan for the selected automation",blueprint)}</div>`;
+  }
+
+  function vRuns(){
+    const rows = RUNS.map((r,i) =>
+      `<tr class="clk" onclick="selRun(${i})"><td class="mono">${r.id}</td>
+        <td>${r.auto}<div class="cellsub">${r.at}</div></td><td>${badge(r.status)}</td>
+        <td>${r.trig}</td><td>${r.dur}</td><td>${r.failed?`<span class="cellsub">${r.failed}</span>`:"—"}</td>
+        <td class="mono">${r.cost}</td></tr>`).join("");
+    const table = `<table><thead><tr><th>Run</th><th>Automation</th><th>Status</th><th>Trigger</th><th>Duration</th><th>Failed step</th><th>Cost</th></tr></thead><tbody>${rows}</tbody></table>`;
+    return head("Operate / Runs & Traces","Runs & Traces",
+      "Debug every execution from trigger → tool calls → verification → policy gate → action.",
+      `<button class="btn">Export traces</button>`)
+      + `<div class="grid main-side">${panel("Run history","Click a run to inspect its trace",flush(table))}
+          <div class="drawer">${runDrawer()}</div></div>`;
+  }
+
+  function runDrawer(){
+    const r = state.run;
+    if (!r) return `<section class="panel"><div class="empty"><div class="ic">${ic("M4 6h16M4 12h10M4 18h7")}</div><p>Select a run to inspect its trace, evidence and policy decisions.</p></div></section>`;
+    const tot = { tok:r.tok, cost:r.cost };
+    const trace = TRACE.map(s => {
+      const calls = s.calls.map(c =>
+        `<div class="tcall"><div><div class="nm">${badge(c.ok==="ok"?"ok":"gated", c.ok==="ok"?"ok":"warn")} ${c.nm}</div><div class="meta">${c.meta}</div></div><span class="mono">${c.dur}</span></div>`).join("");
+      return `<div class="tstage ${s.st}"><div class="tstage-h"><div class="tnode">${s.node}</div>
+        <div><div class="nm">${s.name}</div><div class="ds">${s.ds}</div></div><span class="mono">${s.dur}</span></div>
+        <div class="tsub">${calls}</div></div>`;
+    }).join("");
+    const isApproval = r.status === "waiting approval";
+    const agent = isApproval ? `<div class="agent" style="margin-top:14px"><div class="ah"><span class="spark">${ic("M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2")}</span><b>Agent recommendation</b><small>read-only · gated</small></div>
+      <div class="pb"><div class="note acc">Patch is narrow and validation passed (2.10% → 0.00%). I cannot apply it: <b>create_gitlab_mr is tier L2</b> and changes a revenue metric. Routed to Approvals.</div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary sm" onclick="go('approvals')">Review evidence</button><button class="btn sm">Replay from step</button></div></div></div>` : "";
+    return `<section class="panel"><div class="ph"><div><h3>${r.id}</h3><div class="sub">${r.auto}</div></div>${badge(r.status)}</div>
+      <div class="pb"><div class="kv">
+        <div><span class="k">Trigger</span><span class="v">${r.trig}</span></div>
+        <div><span class="k">Duration</span><span class="v">${r.dur}</span></div>
+        <div><span class="k">Tokens · cost</span><span class="v mono">${tot.tok} · ${tot.cost}</span></div>
+        <div><span class="k">Raw rows → LLM</span><span class="v">0 ✓</span></div>
+        <div><span class="k">Policy outcome</span><span class="v">${isApproval?"Approval required":"Completed"}</span></div>
+      </div>
+      <div style="margin:16px 0 6px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Execution trace</div>
+      <div class="trace">${trace}</div>${agent}</div></section>`;
+  }
+
+  function vApprovals(){
+    const items = APPROVALS.map((a,i) =>
+      `<div class="item ${state.appr.id===a.id?"":""}" onclick="selAppr(${i})"><span class="lead med"></span>
+        <div><div class="t">${a.title}</div><div class="s">${a.auto} · impact: ${a.impact}</div></div>
+        <div class="r">${badge(a.risk)}${badge(a.age,"warn")}</div></div>`).join("");
+    return head("Decide / Approvals","Approvals",
+      "A focused inbox for gated actions. Review evidence, impact, diff and rollback before any side effect.",
+      `<button class="btn">Approval policy</button>`)
+      + `<div class="grid main-side">${panel("Pending inbox","Actions blocked by governance",flush(`<div class="list">${items}</div>`))}
+          <div class="drawer">${apprDrawer()}</div></div>`;
+  }
+
+  function apprDrawer(){
+    const a = state.appr;
+    const evi = a.evidence.map(e => `<div class="evcard"><div class="top"><span class="ty">${e[0]}</span></div><div class="bd">${e[1]}</div></div>`).join("");
+    const diff = a.diff.length ? `<div style="margin:16px 0 6px;font-size:12px;font-weight:700;color:var(--muted)">Proposed diff</div>
+      <div class="diff">${a.diff.map(d=>`<div class="ln ${d[0]}">${d[0]==="add"?"+ ":d[0]==="del"?"- ":"  "}${d[1]}</div>`).join("")}</div>` : "";
+    return `<section class="panel"><div class="ph"><div><h3>${a.title}</h3><div class="sub">${a.id} · ${a.auto}</div></div>${badge(a.risk)}</div>
+      <div class="pb">
+        <div class="note warn">${ic("M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z")}<div><b>Why this is gated</b><br>${a.why}</div></div>
+        <div style="margin:16px 0 6px;font-size:12px;font-weight:700;color:var(--muted)">Evidence</div>
+        <div class="evi">${evi}</div>
+        ${diff}
+        <div class="kv" style="margin-top:16px">
+          <div><span class="k">Impact</span><span class="v">${a.impact}</span></div>
+          <div><span class="k">Rollback</span><span class="v" style="max-width:60%">${a.rollback}</span></div>
+        </div>
+        <div class="note acc" style="margin-top:12px">${ic("M9 12l2 2 4-5")}<div><b>Validation</b><br>${a.validation}</div></div>
+        <div style="display:flex;gap:8px;margin-top:18px">
+          <button class="btn ok" onclick="approveDemo()">Approve action</button>
+          <button class="btn bad">Reject</button>
+          <button class="btn">Request changes</button>
+        </div>
+        <div id="apprResult"></div>
+      </div></section>`;
+  }
+  window.approveDemo = () => {
+    document.getElementById("apprResult").innerHTML =
+      `<div class="note acc" style="margin-top:12px">${ic("M9 12l2 2 4-5")}<div>Approved → GitLab MR drafted, RCA written to incident memory, Teams notified. Action logged to audit trail.</div></div>`;
+  };
+
+  function vIncidents(){
+    const tabs = ["Queue","RCA detail","DAG monitor"];
+    const tabbar = `<div class="tabs">${tabs.map((t,i)=>`<button class="${state.tab===i?"active":""}" onclick="setTab(${i})">${t}</button>`).join("")}</div>`;
+    let body;
+    if (state.tab===2){
+      const rows = DAGS.map(d=>`<tr><td><strong>${d.id}</strong><div class="cellsub">${d.last} · ${d.success} success</div></td><td>${badge(d.status)}</td><td>${d.sla}</td><td>${d.rt}</td><td>${d.owner}</td><td>${d.alert||"—"}</td></tr>`).join("");
+      body = panel("DAG monitor","Airflow status with owner & SLA — sub-context of incidents",flush(`<table><thead><tr><th>DAG</th><th>Status</th><th>SLA</th><th>Runtime</th><th>Owner</th><th>Alert</th></tr></thead><tbody>${rows}</tbody></table>`));
+    } else if (state.tab===1){
+      const a = state.inc;
+      body = `<div class="grid main-side">
+        ${panel(a.title, `${a.dag} · ${a.src} · ${a.date}`,
+          `<div class="kv"><div><span class="k">Severity</span><span class="v">${badge(a.sev)}</span></div>
+            <div><span class="k">Decision</span><span class="v">${a.mode}</span></div>
+            <div><span class="k">Confidence</span><span class="v">${a.confidence}</span></div></div>
+           <div class="note ${a.status==='escalated'?'bad':'acc'}" style="margin-top:14px">${ic("M12 3v18M3 12h18")}<div>${a.summary}</div></div>
+           <div style="display:flex;gap:8px;margin-top:14px"><button class="btn primary sm" onclick="go('runs')">Open trace</button><button class="btn sm" onclick="go('approvals')">Review proposal</button><button class="btn sm">Assign owner</button></div>`,
+          badge(a.status))}
+        ${panel("Lineage / blast radius","Downstream impact",
+          `<div class="flow" style="grid-auto-flow:row"><div class="fnode"><b>payment_txn</b><span>source · 1.27M rows</span></div>
+           <div class="farr" style="text-align:center">↓</div><div class="fnode"><b>stg_payment → revenue_daily</b><span>staging → mart</span></div>
+           <div class="farr" style="text-align:center">↓</div><div class="fnode"><b>net_revenue → finance_revenue_report</b><span>metric → Finance dashboard</span></div></div>`)}
+      </div>`;
+    } else {
+      const items = INCIDENTS.map((x,i)=>`<div class="item ${x.sev==='high'?'high':'med'}" onclick="selInc(${i})"><span class="lead"></span>
+        <div><div class="t">${x.title}</div><div class="s">${x.src} · ${x.dag} · ${x.date}</div></div>
+        <div class="r">${badge(x.sev)}${badge(x.status)}</div></div>`).join("");
+      body = panel("Incident queue","Prioritized anomalies & failed jobs",flush(`<div class="list">${items}</div>`));
+    }
+    return head("Decide / Incidents","Incidents",
+      "Why something is wrong, the evidence, and the proposed action — before anything runs. DAG, DQ and lineage live here as sub-context.",
+      `<button class="btn">Open Airflow</button>`) + tabbar + body;
+  }
+  window.setTab = i => { state.tab=i; render(); };
+
+  function vIntegrations(){
+    const rows = INTEGRATIONS.map(i=>`<tr><td><strong>${i.name}</strong>${i.note?`<div class="cellsub" style="color:var(--bad)">${i.note}</div>`:""}</td><td>${badge(i.type,"neu")}</td><td>${badge(i.status)}</td><td>${i.auth}</td><td>${i.scopes}</td><td>${i.calls}</td><td>${i.err}</td></tr>`).join("");
+    const boundary = `<div class="flow">
+      <div class="fnode"><b>Planner</b><span>requests capability</span></div><div class="farr">→</div>
+      <div class="fnode"><b>Tool registry</b><span>maps canonical tool</span></div><div class="farr">→</div>
+      <div class="fnode"><b>Policy gate</b><span>checks tier + approval</span></div><div class="farr">→</div>
+      <div class="fnode"><b>MCP gateway</b><span>allow-listed tool only</span></div><div class="farr">→</div>
+      <div class="fnode"><b>External</b><span>Airflow · GitLab · Teams</span></div></div>`;
+    return head("Govern / Integrations","Integrations",
+      "MCP-backed systems and connector health. Tools exposed to agents stay allow-listed and governed by the same tiers.",
+      `<button class="btn primary">Add connector</button>`)
+      + `<div class="grid">${panel("Connector health","MCP servers & external systems",flush(`<table><thead><tr><th>Connector</th><th>Type</th><th>Status</th><th>Auth</th><th>Scopes</th><th>Calls</th><th>Error rate</th></tr></thead><tbody>${rows}</tbody></table>`))}
+          ${panel("MCP boundary","Agents never call MCP servers directly",boundary)}</div>`;
+  }
+
+  function vCatalog(){
+    const metrics = `<div class="list">
+      <div class="item"><span class="lead"></span><div><div class="t">net_revenue</div><div class="s">Owner Finance · source payment_txn, order_fact</div></div><div class="r">${badge("healthy")}</div></div>
+      <div class="item"><span class="lead"></span><div><div class="t">gross_revenue</div><div class="s">Owner Finance · source payment_txn</div></div><div class="r">${badge("healthy")}</div></div>
+      <div class="item med"><span class="lead"></span><div><div class="t">margin</div><div class="s">Owner Finance · contract stale</div></div><div class="r">${badge("attention")}</div></div></div>`;
+    const assets = `<div class="list">
+      <div class="item"><span class="lead"></span><div><div class="t">payment_txn</div><div class="s">1.27M rows · source layer</div></div><div class="r">${badge("healthy")}</div></div>
+      <div class="item med"><span class="lead"></span><div><div class="t">revenue_daily</div><div class="s">mart · stale yesterday</div></div><div class="r">${badge("attention")}</div></div>
+      <div class="item med"><span class="lead"></span><div><div class="t">finance_revenue_report</div><div class="s">dashboard · downstream Finance</div></div><div class="r">${badge("attention")}</div></div></div>`;
+    const contracts = `<div class="kv">
+      <div><span class="k">refund_status accepted_values</span><span class="v">${badge("verified")}</span></div>
+      <div><span class="k">amount not_null</span><span class="v">${badge("verified")}</span></div>
+      <div><span class="k">order_channel (orders)</span><span class="v">${badge("attention")}</span></div></div>`;
+    return head("Govern / Catalog","Data Catalog",
+      "Tables, metrics, owners, contracts and lineage used by automations and investigations.",
+      `<button class="btn">Sync metadata</button>`)
+      + `<div class="grid c3">${panel("Critical metrics","Business definitions",flush(metrics))}
+          ${panel("Data assets","Tables & reports",flush(assets))}
+          ${panel("Data contracts","dbt test status",contracts)}</div>`;
+  }
+
+  function vGovernance(){
+    const rows = POLICIES.map(p=>`<tr><td><strong>${p[0]}</strong></td><td>${p[1]==="Blocked"?badge("blocked","bad"):p[1]==="Allowed"?badge("allowed","ok"):p[1]==="Auto with audit"?badge(p[1],"ok"):badge(p[1],"warn")}</td><td>${p[2]}</td></tr>`).join("");
+    const audit = `<div class="kv">
+      <div><span class="k">Raw rows to LLM</span><span class="v">${badge("blocked","bad")}</span></div>
+      <div><span class="k">Production deploy</span><span class="v">${badge("blocked","bad")}</span></div>
+      <div><span class="k">External write</span><span class="v">${badge("approval","warn")}</span></div>
+      <div><span class="k">MCP tool access</span><span class="v">allow-list only</span></div>
+      <div><span class="k">Memory write-back</span><span class="v">after validated + approved</span></div></div>`;
+    return head("Govern / Governance","Governance",
+      "What agents may read, draft, retry, notify or block. Every tool call and approval is auditable.",
+      `<button class="btn primary">Create policy</button>`)
+      + `<div class="grid main-side">${panel("Permission tiers","Execution policy — L1/L2/L3",flush(`<table><thead><tr><th>Tier</th><th>Default decision</th><th>Examples</th></tr></thead><tbody>${rows}</tbody></table>`))}
+          ${panel("Audit posture","Current hard controls",audit)}</div>`;
+  }
+
+  const VIEWS = { overview:vOverview, automations:vAutomations, runs:vRuns, approvals:vApprovals,
+                  incidents:vIncidents, integrations:vIntegrations, catalog:vCatalog, governance:vGovernance };
+
+  function render(){ renderNav(); document.getElementById("view").innerHTML = VIEWS[state.view](); }
+  window.go = k => { state.view=k; if(k==="incidents") state.tab=0; render(); window.scrollTo(0,0); };
+  window.selRun = i => { state.run=RUNS[i]; render(); };
+  window.selAppr = i => { state.appr=APPROVALS[i]; render(); };
+  window.selInc = i => { state.inc=INCIDENTS[i]; state.tab=1; render(); };
+  render();
+  </script>
+</body>
+</html>

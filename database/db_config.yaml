@@ -1,0 +1,8 @@
+# Cấu hình database demo (SQLite, file-based).
+# Có thể override bằng env DATABASE_PATH.
+database:
+  path: database/finance_dataops.db
+
+# Ngày demo chính (Slice 1 — case PARTIAL_REFUND).
+demo:
+  primary_txn_date: "2026-06-07"

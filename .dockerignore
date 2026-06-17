@@ -1,0 +1,29 @@
+# Bí mật — TUYỆT ĐỐI không đưa vào image
+.env
+.env.*
+!.env.example
+.greennode.json
+*registry*credential*.json
+.agentbase/
+
+# Virtualenv / cache
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+
+# Git & IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Bộ skill deploy (không cần nằm trong image agent)
+greennode-agentbase-skills/
+
+# Tài liệu / DB local (DB sẽ seed lại trong container nếu cần)
+*.md
+!README.md
+database/*.db

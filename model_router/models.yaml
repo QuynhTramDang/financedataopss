@@ -1,0 +1,111 @@
+# Model Router config — Phase 1 (pluggable, chỉ wire thật 1–2 model).
+# Mỗi route trỏ tới một provider logic. Nếu provider không khả dụng
+# (vd thiếu env), router tự fallback sang fallback_provider rồi tới route mặc định.
+
+defaults:
+  fallback_route: planner   # route dùng khi provider của route hiện tại lỗi/không khả dụng
+  max_retries: 2            # số lần retry khi LLM trả sai schema
+
+# ── Providers: nguồn model thật ──────────────────────────────
+providers:
+  anthropic_planner:
+    type: anthropic
+    model_env: ANTHROPIC_PLANNER_MODEL
+    model_default: claude-opus-4-8
+  anthropic_small:
+    type: anthropic
+    model_env: ANTHROPIC_SMALL_MODEL
+    model_default: claude-haiku-4-5-20251001
+  small_openai_compat:        # Qwen/Gemma qua endpoint OpenAI-compatible (tùy chọn)
+    type: openai_compat
+    base_url_env: SMALL_MODEL_BASE_URL
+    api_key_env: SMALL_MODEL_API_KEY
+    model_env: SMALL_MODEL_NAME
+  # ── GreenNode MaaS — cả 3 model dùng CHUNG base_url + api_key, chỉ khác model id ──
+  maas:                       # mặc định / fallback chung (MAAS_MODEL)
+    type: openai_compat
+    base_url_env: MAAS_BASE_URL
+    api_key_env: MAAS_API_KEY
+    model_env: MAAS_MODEL
+  maas_qwen:                  # Qwen 3.5 27B — reasoning & coding
+    type: openai_compat
+    base_url_env: MAAS_BASE_URL
+    api_key_env: MAAS_API_KEY
+    model_env: MAAS_MODEL_QWEN
+  maas_minimax:               # MiniMax M2.5 — context dài, hội thoại
+    type: openai_compat
+    base_url_env: MAAS_BASE_URL
+    api_key_env: MAAS_API_KEY
+    model_env: MAAS_MODEL_MINIMAX
+  maas_gemma:                 # Gemma 4 31B-IT — task nhẹ, latency thấp
+    type: openai_compat
+    base_url_env: MAAS_BASE_URL
+    api_key_env: MAAS_API_KEY
+    model_env: MAAS_MODEL_GEMMA
+
+# ── Routes: mỗi node của graph dùng route nào ────────────────
+# DEPLOY MODE (Claw-a-thon): mọi route trỏ `maas` vì AgentBase chỉ có MaaS,
+# KHÔNG có Claude. Cả 3 model MaaS đều dùng chung MAAS_MODEL trong .env.
+# Muốn chạy/test local bằng Claude lại: đổi provider về anthropic_* như cũ
+# (xem lịch sử git) hoặc set ANTHROPIC_* trong .env.
+routes:
+  classifier:
+    provider: maas_gemma          # task nhẹ
+    fallback_provider: maas_minimax
+    phase1: real
+    use_case: intent_and_risk_classification
+  query_rewriter:
+    provider: maas_gemma
+    fallback_provider: maas_minimax
+    phase1: stub
+    use_case: memory_and_rag_query_rewrite
+  planner:
+    provider: maas_qwen           # reasoning
+    fallback_provider: maas_minimax
+    phase1: real
+    use_case: orchestration_reasoning
+  sql_generator:
+    provider: maas_qwen           # coding
+    fallback_provider: maas_minimax
+    phase1: stub
+    use_case: sql_profile_generation
+  code_model:
+    provider: maas_qwen           # coding
+    fallback_provider: maas_minimax
+    phase1: stub
+    use_case: code_search_and_patch_generation
+  long_context_analyzer:
+    provider: maas_minimax        # context dài
+    fallback_provider: maas_qwen
+    phase1: stub
+    use_case: long_docs_logs_codebase_analysis
+  claim_verifier:
+    provider: maas_qwen           # LLM chỉ tách claim; rule engine quyết status
+    fallback_provider: maas_minimax
+    phase1: real
+    use_case: claim_level_verification
+  patch_reviewer:
+    provider: maas_qwen           # review rủi ro patch
+    fallback_provider: maas_minimax
+    phase1: real
+    use_case: patch_risk_review
+  rca_generator:
+    provider: maas_minimax        # báo cáo dài, context lớn
+    fallback_provider: maas_qwen
+    phase1: real
+    use_case: rca_report_generation
+  guardrail:
+    provider: maas_gemma
+    fallback_provider: maas_minimax
+    phase1: stub
+    use_case: pii_masking_and_small_summarization
+
+# ── Ghi chú deploy lên AgentBase (Claw-a-thon) ───────────────
+# Trên AgentBase chỉ có MaaS (Gemma/Qwen/Minimax), KHÔNG có Claude → đã route hết sang maas_*.
+# Model id thật (field `path` trên portal), điền trong .env:
+#   MAAS_MODEL_QWEN    = qwen/qwen3-5-27b
+#   MAAS_MODEL_MINIMAX = minimax/minimax-m2.5
+#   MAAS_MODEL_GEMMA   = google/gemma-4-31b-it
+# Mỗi route có fallback_provider để nếu 1 model lỗi thì tự chuyển sang model khác.
+# Muốn chạy/test local bằng Claude lại: đổi provider về anthropic_* (xem lịch sử git).
+# LƯU Ý: đổi models.yaml xong phải BUILD LẠI image (file này được COPY vào image).

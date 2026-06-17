@@ -1,0 +1,61 @@
+{
+  "payment_txn": {
+    "partition_key": "txn_date",
+    "columns": ["txn_id", "txn_date", "amount", "refund_status", "refunded_amount", "order_id"],
+    "known_values": {
+      "refund_status": ["NONE", "REFUNDED"]
+    },
+    "measure_columns": ["amount"],
+    "last_profiled_at": "2026-05-31T09:00:00"
+  },
+  "order_fact": {
+    "partition_key": "txn_date",
+    "columns": ["order_id", "txn_date", "customer_id", "region", "category", "order_amount", "order_status"],
+    "known_values": {
+      "region": ["NORTH", "SOUTH", "CENTRAL"],
+      "category": ["GAME", "ADS", "PAYMENT"]
+    },
+    "measure_columns": ["order_amount"],
+    "last_profiled_at": "2026-05-31T09:00:00"
+  },
+  "dtm_revenue_daily": {
+    "partition_key": "txn_date",
+    "columns": ["txn_date", "gross_revenue", "net_revenue", "total_refunded", "txn_count", "order_count", "refund_rate", "net_revenue_7d_avg"],
+    "known_values": {},
+    "measure_columns": ["net_revenue", "gross_revenue"],
+    "last_profiled_at": "2026-05-31T09:00:00"
+  },
+  "cash_flow_txn": {
+    "partition_key": "flow_date",
+    "columns": ["cf_id", "flow_date", "amount", "settlement_status", "held_amount", "settlement_id", "channel", "direction"],
+    "known_values": {
+      "settlement_status": ["SETTLED", "PENDING", "FAILED"],
+      "channel": ["BANK", "WALLET", "CARD"],
+      "direction": ["INFLOW", "OUTFLOW"]
+    },
+    "measure_columns": ["amount", "held_amount"],
+    "last_profiled_at": "2026-05-31T08:00:00"
+  },
+  "spend_txn": {
+    "partition_key": "spend_date",
+    "columns": ["spend_id", "spend_date", "amount", "adjust_status", "credit_amount", "spend_key", "channel", "department"],
+    "known_values": {
+      "adjust_status": ["NONE", "REBATE"],
+      "channel": ["FACEBOOK", "GOOGLE", "TIKTOK", "OPS"],
+      "department": ["MKT", "OPS", "ENG"]
+    },
+    "measure_columns": ["amount", "credit_amount"],
+    "last_profiled_at": "2026-05-31T08:00:00"
+  },
+  "invoice_txn": {
+    "partition_key": "invoice_date",
+    "columns": ["invoice_id", "invoice_date", "amount", "ar_status", "credited_amount", "invoice_key", "segment", "region"],
+    "known_values": {
+      "ar_status": ["OPEN", "PAID", "WRITTEN_OFF"],
+      "segment": ["SME", "ENTERPRISE", "RETAIL"],
+      "region": ["NORTH", "SOUTH", "CENTRAL"]
+    },
+    "measure_columns": ["amount", "credited_amount"],
+    "last_profiled_at": "2026-05-31T08:00:00"
+  }
+}

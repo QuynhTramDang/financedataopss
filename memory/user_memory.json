@@ -1,0 +1,10 @@
+{
+  "role": "Data Engineer",
+  "team": "Data Platform for Finance",
+  "preferred_stack": ["dbt", "PostgreSQL", "Airflow"],
+  "coding_rules": [
+    "avoid select *",
+    "always filter by partition date",
+    "never change finance metric without approval"
+  ]
+}

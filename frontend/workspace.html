@@ -1,0 +1,401 @@
+<!doctype html>
+<!--
+  Finance DataOps Workspace (v2.1) — English UI, Grafana-style Operations Overview,
+  floating context-aware AI Copilot. Self-contained (React+Tailwind+Babel CDN).
+  Sample metadata; production wires Metadata Store + Agent (FastAPI) via REST.
+-->
+<html lang="en" class="">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Finance DataOps Workspace</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}};</script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body{font-family:'Inter',system-ui,sans-serif}
+    @keyframes pd{0%,100%{opacity:1}50%{opacity:.3}} .pulse{animation:pd 1.6s ease-in-out infinite}
+    @keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .thin::-webkit-scrollbar{width:7px;height:7px}.thin::-webkit-scrollbar-thumb{background:rgba(100,116,139,.35);border-radius:8px}
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950">
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const {useState,useEffect,useRef}=React;
+
+/* ───── Icons ───── */
+function Icon({name,className="w-4 h-4",sw=2}){const p={fill:"none",stroke:"currentColor",strokeWidth:sw,strokeLinecap:"round",strokeLinejoin:"round"};const s=c=><svg viewBox="0 0 24 24" className={className} {...p}>{c}</svg>;
+ switch(name){
+  case"grid":return s(<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></>);
+  case"workflow":return s(<><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M6 9v3a3 3 0 0 0 3 3h6"/></>);
+  case"activity":return s(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>);
+  case"book":return s(<><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></>);
+  case"network":return s(<><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v4M10 17l-3.5-3M14 17l3.5-3"/></>);
+  case"code":return s(<><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></>);
+  case"search":return s(<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>);
+  case"bell":return s(<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></>);
+  case"bot":return s(<><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 2h8"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></>);
+  case"chevron":return s(<path d="m9 18 6-6-6-6"/>);
+  case"check":return s(<><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>);
+  case"x":return s(<><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></>);
+  case"alert":return s(<><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/></>);
+  case"play":return s(<polygon points="6 4 20 12 6 20 6 4"/>);
+  case"refresh":return s(<><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></>);
+  case"link":return s(<><path d="M15 7h3a5 5 0 0 1 0 10h-3M9 17H6A5 5 0 0 1 6 7h3"/><line x1="8" y1="12" x2="16" y2="12"/></>);
+  case"clock":return s(<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>);
+  case"db":return s(<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></>);
+  case"target":return s(<><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></>);
+  case"layers":return s(<><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></>);
+  case"sun":return s(<><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></>);
+  case"moon":return s(<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>);
+  case"send":return s(<><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></>);
+  case"spark":return s(<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>);
+  case"dollar":return s(<><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></>);
+  case"gauge":return s(<><path d="M12 14 8 10"/><path d="M3.3 17a9 9 0 1 1 17.4 0"/></>);
+  case"copy":return s(<><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></>);
+  case"git":return s(<><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></>);
+  case"trash":return s(<><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></>);
+  default:return s(<circle cx="12" cy="12" r="3"/>);
+ }}
+
+/* ───── primitives ───── */
+const TONE={emerald:"text-emerald-700 bg-emerald-50 ring-emerald-600/20 dark:text-emerald-400 dark:bg-emerald-500/10",rose:"text-rose-700 bg-rose-50 ring-rose-600/20 dark:text-rose-400 dark:bg-rose-500/10",amber:"text-amber-700 bg-amber-50 ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10",indigo:"text-indigo-700 bg-indigo-50 ring-indigo-600/20 dark:text-indigo-400 dark:bg-indigo-500/10",slate:"text-slate-600 bg-slate-100 ring-slate-500/20 dark:text-slate-300 dark:bg-slate-700/40"};
+const MAP={success:"emerald",running:"indigo",failed:"rose",delayed:"amber",pending:"slate",high:"rose",medium:"amber",low:"slate",open:"rose",investigating:"amber",resolved:"emerald",OK:"emerald",STALE:"amber",High:"emerald",Medium:"amber",Low:"rose",PASS:"emerald",FAIL:"rose"};
+const Badge=({tone="slate",children})=><span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${TONE[MAP[tone]||tone]||TONE.slate}`}>{children}</span>;
+const DOTC={emerald:"#10b981",rose:"#f43f5e",amber:"#f59e0b",indigo:"#6366f1",slate:"#94a3b8"};
+const Dot=({tone="emerald",pulse})=><span className={`inline-block w-2 h-2 rounded-full ${pulse?"pulse":""}`} style={{background:DOTC[MAP[tone]||tone]}}/>;
+const Btn=({variant="primary",className="",children,...r})=>{const v={primary:"bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 shadow-sm",ghost:"bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-3.5 py-2",soft:"bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 px-2.5 py-1.5"}[variant];return <button className={`inline-flex items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed ${v} ${className}`} {...r}>{children}</button>;};
+const Card=({className="",children})=><div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 ${className}`}>{children}</div>;
+const H=({icon,children,sub,right})=><div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2.5">{icon&&<span className="grid place-items-center w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"><Icon name={icon} className="w-[18px] h-[18px]"/></span>}<div><h2 className="font-bold text-slate-800 dark:text-slate-100">{children}</h2>{sub&&<p className="text-xs text-slate-400">{sub}</p>}</div></div>{right}</div>;
+const Field=({label,children})=><div className="flex gap-2 text-[13px] py-1"><span className="text-slate-400 w-36 shrink-0">{label}</span><span className="text-slate-700 dark:text-slate-200 font-medium">{children}</span></div>;
+const AskBtn=({onClick})=><button onClick={onClick} className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 px-2 py-1 rounded-md"><Icon name="bot" className="w-3.5 h-3.5"/>Ask AI</button>;
+
+/* ───── mini charts (inline SVG) ───── */
+function Spark({data,w=130,h=34,color="#6366f1"}){if(!data||!data.length)return null;const max=Math.max(...data),min=Math.min(...data),rng=(max-min)||1;const pts=data.map((v,i)=>`${(i/(data.length-1))*w},${h-((v-min)/rng)*(h-4)-2}`).join(" ");return <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible"><polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"/></svg>;}
+function HBars({items,fmt}){const max=Math.max(...items.map(i=>i.value),1);return <div className="space-y-2">{items.map((it,k)=><button key={k} onClick={it.onClick} className="w-full text-left block"><div className="flex justify-between text-[11.5px] mb-0.5"><span className="text-slate-500 dark:text-slate-400">{it.label}</span><span className="text-slate-400">{fmt?fmt(it):it.value}</span></div><div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full" style={{width:`${(it.value/max)*100}%`,background:it.color||"#6366f1"}}/></div></button>)}</div>;}
+function HourStack({buckets,h=96}){const keys=[["success","#10b981"],["failed","#f43f5e"],["retry","#f59e0b"],["running","#6366f1"]];const max=Math.max(...buckets.map(b=>keys.reduce((s,[k])=>s+(b[k]||0),0)),1);const bw=100/buckets.length;return <div><svg viewBox={`0 0 100 ${h}`} className="w-full" style={{height:h}} preserveAspectRatio="none">{buckets.map((b,i)=>{let y=h;const x=i*bw+bw*0.18,w=bw*0.64;return <g key={i}>{keys.map(([k,c])=>{const val=b[k]||0,hh=(val/max)*(h-2);if(!val)return null;y-=hh;return <rect key={k} x={x} y={y} width={w} height={hh} fill={c} rx="0.5"/>;})}</g>;})}</svg><div className="flex justify-between text-[9px] text-slate-400 mt-1">{buckets.map((b,i)=><span key={i}>{b.h}</span>)}</div></div>;}
+function Donut({segs,size=92}){const total=segs.reduce((s,x)=>s+x.value,0)||1;let acc=0;const r=size/2-9,cx=size/2,cy=size/2,circ=2*Math.PI*r;return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>{segs.map((s,i)=>{const frac=s.value/total,dash=`${frac*circ} ${circ}`,off=-acc*circ;acc+=frac;return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth="9" strokeDasharray={dash} strokeDashoffset={off} transform={`rotate(-90 ${cx} ${cy})`}/>;})}<text x={cx} y={cy+5} textAnchor="middle" fontSize="15" fontWeight="800" fill="#64748b">{total}</text></svg>;}
+function Gauge({pct,size=128}){const r=size/2-12,cx=size/2,cy=size/2,a=Math.PI*(1-pct/100),x=cx+r*Math.cos(a),y=cy-r*Math.sin(a);const color=pct>=95?"#10b981":pct>=85?"#f59e0b":"#f43f5e";return <svg width={size} height={size/2+12} viewBox={`0 0 ${size} ${size/2+12}`}><path d={`M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}`} fill="none" stroke="#e2e8f0" strokeWidth="10"/><path d={`M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${x} ${y}`} fill="none" stroke={color} strokeWidth="10" strokeLinecap="round"/><text x={cx} y={cy-4} textAnchor="middle" fontSize="22" fontWeight="800" fill="#334155">{pct}%</text></svg>;}
+function Heat({rows}){const c={ok:"#10b981",warn:"#f59e0b",bad:"#f43f5e"};return <div className="space-y-1.5">{rows.map(r=><div key={r.name} className="flex items-center gap-2"><span className="font-mono text-[11px] w-44 truncate text-slate-500 dark:text-slate-400">{r.name}</span><div className="flex gap-1">{r.cells.map((v,i)=><span key={i} className="w-4 h-4 rounded" style={{background:c[v]}} title={v}/>)}</div></div>)}</div>;}
+
+/* ───── sample metadata ───── */
+const DAGS={
+ revenue_daily_dag:{id:"revenue_daily_dag",project:"finance_revenue",owner:"finance-data",status:"failed",schedule:"0 4 * * *",sla:"04:00",runtime:0,baseline:80,last:"today 04:00",next:"tomorrow 04:00",success7:"86%",failed7:2,outputs:["revenue_daily","finance_revenue_report"],inputs:["stg_payment","order_fact"],
+   tasks:[{id:"extract_payment",status:"success"},{id:"map_refund",status:"failed",error:"dbt test accepted_values(refund_status) failed: PARTIAL_REFUND",cause:"data issue (enum drift)"},{id:"load_report",status:"skipped"}],
+   runs:[["today 04:00","failed","—"],["yesterday 04:01","success","78m"],["2 days ago","success","80m"]]},
+ load_stripe_payments:{id:"load_stripe_payments",project:"finance_revenue",owner:"data-platform",status:"failed",schedule:"0 3 * * *",sla:"03:00",runtime:0,baseline:120,last:"today 03:02",next:"tomorrow 03:00",success7:"71%",failed7:3,outputs:["payment_txn"],inputs:["Stripe API"],
+   tasks:[{id:"call_stripe_api",status:"failed",error:"HTTP 429 Too Many Requests",cause:"infra/transient"}],runs:[["today 03:02","failed","—"]]},
+ daily_orders_pipeline:{id:"daily_orders_pipeline",project:"orders",owner:"orders-data",status:"failed",schedule:"0 2 * * *",sla:"02:30",runtime:0,baseline:60,last:"today 02:31",next:"tomorrow 02:00",success7:"80%",failed7:2,outputs:["stg_orders"],inputs:["raw.orders"],
+   tasks:[{id:"compile_stg_orders",status:"failed",error:"Schema mismatch: required column 'order_channel' added by upstream",cause:"data/schema issue"}],runs:[["today 02:31","failed","—"]]},
+ stg_payment_dag:{id:"stg_payment_dag",project:"finance_revenue",owner:"data-platform",status:"running",schedule:"0 3 * * *",sla:"03:30",runtime:45,baseline:90,last:"running",next:"—",success7:"95%",failed7:0,outputs:["stg_payment"],inputs:["payment_txn"],tasks:[{id:"clean_payment",status:"running"}],runs:[]},
+};
+const TABLES={
+ payment_txn:{name:"payment_txn",schema:"raw",layer:"source",owner:"data-platform",project:"finance_revenue",fresh:"OK",updated:"today 09:00",rows:"1.27M",dag:"load_stripe_payments",upstream:["Stripe API"],downstream:["stg_payment"],desc:"Raw payment transactions ingested from Stripe.",cols:[["txn_id","bigint","PK"],["txn_date","date","partition"],["amount","bigint","paid amount"],["refund_status","string","NONE|REFUNDED|PARTIAL_REFUND"],["refunded_amount","bigint",""]],issues:["INC-2026-0607","INC-2026-0608"]},
+ revenue_daily:{name:"revenue_daily",schema:"mart",layer:"mart",owner:"finance-data",project:"finance_revenue",fresh:"STALE",updated:"yesterday 04:01",rows:"1.4K",dag:"revenue_daily_dag",upstream:["stg_payment","order_fact"],downstream:["net_revenue","finance_revenue_report"],desc:"Daily net_revenue mart.",cols:[["txn_date","date","partition"],["net_revenue","bigint","metric"]],issues:["INC-2026-0607"]},
+ stg_payment:{name:"stg_payment",schema:"staging",layer:"staging",owner:"data-platform",project:"finance_revenue",fresh:"OK",updated:"today 03:25",rows:"1.27M",dag:"stg_payment_dag",upstream:["payment_txn"],downstream:["revenue_daily"],desc:"Cleaned/standardized payments.",cols:[["txn_id","bigint",""],["amount","bigint",""]],issues:[]},
+ finance_revenue_report:{name:"finance_revenue_report",schema:"report",layer:"report",owner:"finance-data",project:"finance_revenue",fresh:"STALE",updated:"yesterday",rows:"—",dag:"revenue_daily_dag",upstream:["revenue_daily"],downstream:[],desc:"Finance revenue dashboard.",cols:[],issues:["INC-2026-0607"]},
+};
+const METRICS={net_revenue:{name:"net_revenue",def:"Net revenue after refunds",formula:"paid_amount − refunded_amount (REFUNDED + PARTIAL_REFUND)",tables:["payment_txn","order_fact"],grain:"daily",owner:"Finance",dag:"revenue_daily_dag",dashboards:["finance_revenue_report"],sql:"SELECT txn_date, SUM(amount)-SUM(CASE WHEN refund_status IN ('REFUNDED','PARTIAL_REFUND') THEN refunded_amount ELSE 0 END) AS net_revenue\nFROM payment_txn GROUP BY txn_date"}};
+const ISSUES={
+ "INC-2026-0607":{id:"INC-2026-0607",title:"net_revenue overstated 2.1%",type:"reconciliation mismatch",sev:"high",status:"open",table:"payment_txn",dag:"revenue_daily_dag",project:"finance_revenue",detected:"today 04:01",owner:"finance-data",
+   cause:"enum drift: PARTIAL_REFUND not mapped in revenue_daily.sql",evidence:["accepted_values(refund_status) FAIL","reconciliation off by 2.10% vs baseline","affected_amount 210,000,000"],affected:{tables:["revenue_daily"],metrics:["net_revenue"],dashboards:["finance_revenue_report"]},timeline:[["04:00","dbt test failed"],["04:01","reconciliation mismatch detected"]],suggestedRule:"accepted_values(refund_status) includes PARTIAL_REFUND"},
+ "INC-2026-0608":{id:"INC-2026-0608",title:"Null spike in amount (40%)",type:"null spike",sev:"medium",status:"investigating",table:"payment_txn",dag:"stg_payment_dag",project:"finance_revenue",detected:"2026-06-08",owner:"data-platform",cause:"ingestion returned null for amount",evidence:["null_rate(amount)=40% (80/200 rows)"],affected:{tables:["revenue_daily"],metrics:["net_revenue"],dashboards:[]},timeline:[["08:00","null_rate threshold breach"]],suggestedRule:"null_rate(amount) < 5%"},
+ "INC-ORD":{id:"INC-ORD",title:"daily_orders schema drift",type:"schema drift",sev:"high",status:"open",table:"raw.orders",dag:"daily_orders_pipeline",project:"orders",detected:"today 02:31",owner:"orders-data",cause:"new required column order_channel",evidence:["Schema diff: + order_channel (required)"],affected:{tables:["stg_orders"],metrics:[],dashboards:["Orders dashboard"]},timeline:[["02:31","compile failed"]],suggestedRule:"schema_contract(raw.orders) version bump"},
+};
+const PROJECTS={finance_revenue:{id:"finance_revenue",name:"Finance Revenue",purpose:"Compute & serve revenue for Finance",owner:"finance-data",health:"degraded",channel:"#finance-data",criticality:"P1",dags:["load_stripe_payments","stg_payment_dag","revenue_daily_dag"],tables:["payment_txn","stg_payment","revenue_daily","finance_revenue_report"],metrics:["net_revenue"],issues:["INC-2026-0607","INC-2026-0608"],sla:"daily 04:00",docPct:80},
+ orders:{id:"orders",name:"Orders",purpose:"Orders data pipeline",owner:"orders-data",health:"degraded",channel:"#orders-data",criticality:"P2",dags:["daily_orders_pipeline"],tables:["raw.orders"],metrics:[],issues:["INC-ORD"],sla:"daily 02:30",docPct:55}};
+
+/* operations overview sample data */
+const OVR={
+ runsByHour:[{h:"00",success:8},{h:"02",success:6,failed:1},{h:"03",success:4,failed:1,retry:2},{h:"04",success:5,failed:1},{h:"06",success:7},{h:"08",success:9,running:1},{h:"10",success:6},{h:"12",success:8,retry:1}],
+ status:{success:142,failed:3,running:1,retry:4,delayed:1,skipped:2},
+ sla:92,
+ freshness:[{name:"payment_txn",cells:["ok","ok","ok","ok","ok"]},{name:"stg_payment",cells:["ok","ok","ok","ok","ok"]},{name:"revenue_daily",cells:["ok","ok","ok","ok","bad"]},{name:"finance_revenue_report",cells:["ok","ok","ok","ok","warn"]},{name:"order_fact",cells:["ok","ok","ok","ok","ok"]}],
+ staleTables:[{name:"revenue_daily",since:"28h"},{name:"finance_revenue_report",since:"27h"}],
+ dqTrend:[97,98,96,95,94,90,88],
+ issuesByType:[{label:"Reconciliation",value:1,color:"#f43f5e"},{label:"Null spike",value:1,color:"#f59e0b"},{label:"Schema drift",value:1,color:"#8b5cf6"},{label:"Freshness",value:2,color:"#0ea5e9"}],
+ slowest:[{label:"load_stripe_payments",value:120,base:120},{label:"revenue_daily_dag",value:78,base:80},{label:"stg_payment_dag",value:45,base:90}],
+ durationTrend:[72,75,80,78,82,90,78],
+ cost:{today:128,yesterday:96,top:[{label:"revenue_daily_dag",value:42},{label:"load_stripe_payments",value:31},{label:"daily_orders_pipeline",value:22}]},
+ schemaChanges:[{asset:"raw.orders",change:"+ order_channel (required)",breaking:true},{asset:"payment_txn",change:"refund_status: new value PARTIAL_REFUND",breaking:true},{asset:"order_fact",change:"+ promo_code (nullable)",breaking:false}],
+ volume:[{name:"payment_txn",series:[120,122,119,121,127,40,118]},{name:"order_fact",series:[30,31,30,32,31,30,31]}],
+ errors:[{label:"Data / schema",value:3,color:"#8b5cf6"},{label:"Infra / transient",value:1,color:"#0ea5e9"},{label:"Code",value:1,color:"#f43f5e"},{label:"Dependency",value:1,color:"#f59e0b"}],
+ projectHealth:[{id:"finance_revenue",name:"Finance Revenue",score:72,issues:2},{id:"orders",name:"Orders",score:64,issues:1}],
+ events:[["02:31","Schema drift — daily_orders_pipeline failed","rose","INC-ORD"],["03:02","Transient 429 — load_stripe_payments retries exhausted","amber",null],["04:01","Reconciliation mismatch — net_revenue 2.1%","rose","INC-2026-0607"],["08:00","Null spike — payment_txn.amount 40%","amber","INC-2026-0608"],["09:00","payment_txn refreshed on time","emerald",null]],
+};
+
+/* lineage */
+const LN_NODES=[{id:"payment_txn",layer:"source",x:20,y:30},{id:"order_fact",layer:"source",x:20,y:120},{id:"stg_payment",layer:"staging",x:210,y:30},{id:"revenue_daily",layer:"mart",x:400,y:75},{id:"net_revenue",layer:"metric",x:600,y:30},{id:"finance_revenue_report",layer:"report",x:600,y:120}];
+const LN_EDGES=[["payment_txn","stg_payment"],["stg_payment","revenue_daily"],["order_fact","revenue_daily"],["revenue_daily","net_revenue"],["revenue_daily","finance_revenue_report"]];
+const LC={source:"#0ea5e9",staging:"#6366f1",mart:"#8b5cf6",metric:"#10b981",report:"#f59e0b"};
+function Lineage({onSelect,height=190}){const pos=Object.fromEntries(LN_NODES.map(n=>[n.id,n]));const W=150,Hh=42;
+ return <div className="overflow-x-auto thin"><svg viewBox="0 0 770 175" style={{height,minWidth:700,width:"100%"}}>
+  {LN_EDGES.map(([a,b],i)=>{const A=pos[a],B=pos[b];return <path key={i} d={`M ${A.x+W} ${A.y+Hh/2} C ${A.x+W+40} ${A.y+Hh/2}, ${B.x-40} ${B.y+Hh/2}, ${B.x} ${B.y+Hh/2}`} fill="none" stroke="#cbd5e1" strokeWidth="2"/>;})}
+  {LN_NODES.map(n=><g key={n.id} onClick={()=>onSelect&&onSelect(n.id)} style={{cursor:"pointer"}}><rect x={n.x} y={n.y} width={W} height={Hh} rx="9" fill="white" stroke={LC[n.layer]} strokeWidth="2"/><rect x={n.x} y={n.y} width="4" height={Hh} fill={LC[n.layer]}/><text x={n.x+13} y={n.y+18} fontSize="12" fontWeight="700" fill="#334155" fontFamily="monospace">{n.id}</text><text x={n.x+13} y={n.y+33} fontSize="9" fill="#94a3b8">{n.layer}</text></g>)}
+ </svg></div>;}
+
+/* ───── Proposed Fix ───── */
+function ProposedFix({fix,perm}){const canPR=perm>=3;
+ return <div className="rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/40 dark:bg-indigo-500/5 p-3.5 space-y-2.5">
+  <div className="flex items-center gap-2"><Icon name="spark" className="w-4 h-4 text-indigo-500"/><span className="font-bold text-sm text-indigo-700 dark:text-indigo-300">Proposed Fix</span><Badge tone={fix.risk}>{fix.risk} risk</Badge></div>
+  <Field label="Problem">{fix.problem}</Field>
+  <div><div className="text-[11px] uppercase font-bold text-slate-400 mb-1">Evidence</div><ul className="space-y-0.5">{fix.evidence.map((e,i)=><li key={i} className="text-[12.5px] text-slate-600 dark:text-slate-300 flex gap-1.5"><Icon name="check" className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0"/>{e}</li>)}</ul></div>
+  <div><div className="text-[11px] uppercase font-bold text-slate-400 mb-1">Diff</div><div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 font-mono text-[12px]"><div className="bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 px-2.5 py-1.5">− {fix.old}</div><div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2.5 py-1.5">+ {fix.new}</div></div></div>
+  <Field label="Validation">{fix.validation}</Field>
+  <Field label="Impact"><span className="flex flex-wrap gap-1">{fix.impact.map(x=><Badge key={x} tone="amber">{x}</Badge>)}</span></Field>
+  <div className="flex flex-wrap gap-2 pt-1">
+   <Btn variant="ghost" className="!py-1.5 !px-2.5 text-xs"><Icon name="copy" className="w-3.5 h-3.5"/>Copy patch</Btn>
+   <Btn variant="ghost" className="!py-1.5 !px-2.5 text-xs"><Icon name="code" className="w-3.5 h-3.5"/>Apply to draft</Btn>
+   <Btn variant="ghost" className="!py-1.5 !px-2.5 text-xs"><Icon name="play" className="w-3.5 h-3.5"/>Run validation</Btn>
+   <Btn className="!py-1.5 !px-2.5 text-xs" disabled={!canPR} title={canPR?"":"Requires L3 (Approval mode)"}><Icon name="git" className="w-3.5 h-3.5"/>Create PR</Btn>
+  </div>
+  {!canPR&&<p className="text-[11px] text-amber-600 dark:text-amber-400">Create PR is locked — switch to L3 (Approval mode) in the top bar. AI never deploys to production.</p>}
+ </div>;}
+const FIXES={
+ map_refund:{problem:"revenue_daily.sql does not map refund_status = PARTIAL_REFUND.",evidence:["catalog: refund_status has value PARTIAL_REFUND","code only handles 'REFUNDED'","reconciliation off by 2.10%"],old:"WHEN refund_status = 'REFUNDED' THEN refunded_amount",new:"WHEN refund_status IN ('REFUNDED','PARTIAL_REFUND') THEN refunded_amount",risk:"high",validation:"7-day reconciliation vs finance_revenue_report",impact:["net_revenue","finance_revenue_report","Finance"]},
+ sql_col:{problem:"Column `total_revenue` does not exist in mart_revenue_daily.",evidence:["catalog has no total_revenue","table has net_revenue","total_revenue was deprecated in the latest schema change"],old:"SELECT SUM(total_revenue) FROM mart_revenue_daily",new:"SELECT SUM(net_revenue) FROM mart_revenue_daily",risk:"medium",validation:"compare 7-day revenue vs finance_revenue_report",impact:["net_revenue"]},
+};
+
+/* ───── contextual AI answer ───── */
+function buildAnswer(q,ctx,mode){const low=(q||"").toLowerCase();
+ if(mode==="Debug"||low.includes("fail")||low.includes("why")||(ctx&&(ctx.type==="task"||ctx.type==="dag"||ctx.type==="issue"))){
+  const cause=(ctx&&ctx.cause)||"data/schema issue";
+  const klass=cause.includes("429")||cause.includes("transient")?"infra/transient":cause.includes("schema")?"data/schema":cause.includes("enum")||cause.includes("PARTIAL")?"data issue":cause.includes("Key")||cause.includes("code")?"code issue":"dependency";
+  return{summary:`${ctx?ctx.id:"Object"} failed — classified as **${klass}**.`,evidence:[cause,"see highlighted logs below"],impact:["net_revenue","finance_revenue_report"],confidence:"High",links:["log://"+(ctx&&(ctx.dag||ctx.id)),"dag://"+(ctx&&(ctx.dag||ctx.id))],next:[klass.includes("transient")?"Auto-retry with backoff (L3)":"Review the Proposed Fix → create a PR draft (L2/L3)","Run validation before merge"],fix:(klass.includes("enum")||klass==="data issue")?FIXES.map_refund:null};
+ }
+ if(low.includes("calcul")||low.includes("how")||low.includes("from")||low.includes("metric")||low.includes("revenue")||mode==="Explain"){
+  const m=METRICS.net_revenue;return{summary:`**${m.name}**: ${m.def}.`,evidence:[`Formula: ${m.formula}`,`Sources: ${m.tables.join(", ")}`,`DAG: ${m.dag}`],impact:m.dashboards,confidence:"High",links:["table://payment_txn","dag://"+m.dag,"dashboard://finance_revenue_report"],next:["Open lineage","Check payment_txn freshness"],sql:m.sql};
+ }
+ if(mode==="Impact"||mode==="What-if"||low.includes("impact")||low.includes("change")||low.includes("if i")){
+  const a=(ctx&&ctx.id)||"stg_payment";return{summary:`Changing **${a}** would impact downstream:`,evidence:["based on lineage graph"],impact:["revenue_daily","net_revenue","finance_revenue_report","Finance"],confidence:"Medium",links:["lineage://"+a],next:["Run reconciliation after the change","Notify Finance Owner (SLA 04:00)"]};
+ }
+ if(mode==="Optimize"||low.includes("optimi")||low.includes("slow")) return{summary:"Optimization suggestions:",evidence:["partial full scan on payment_txn"],impact:[],confidence:"Medium",links:[],next:["Partition by txn_date","Parallelize the two staging tasks","Cache refund_status profile"]};
+ return{summary:"I need more context (pick an object in the sidebar/page or name it explicitly). I won't guess when metadata is missing.",evidence:[],impact:[],confidence:"Low",links:[],next:[]};
+}
+function AnswerCard({a,perm}){const Row=({l,children})=><div className="flex gap-2 text-[12.5px] py-0.5"><span className="text-slate-400 w-20 shrink-0">{l}</span><span className="text-slate-700 dark:text-slate-200">{children}</span></div>;
+ return <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 space-y-1.5">
+  <p className="text-[13px] text-slate-700 dark:text-slate-200" dangerouslySetInnerHTML={{__html:a.summary.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}}/>
+  {a.evidence&&a.evidence.length>0&&<Row l="Evidence"><ul className="space-y-0.5">{a.evidence.map((e,i)=><li key={i}>• {e}</li>)}</ul></Row>}
+  {a.sql&&<pre className="bg-slate-950 text-slate-200 rounded-lg p-2 text-[11px] font-mono overflow-x-auto thin whitespace-pre-wrap">{a.sql}</pre>}
+  {a.impact&&a.impact.length>0&&<Row l="Impact"><span className="flex flex-wrap gap-1">{a.impact.map(x=><Badge key={x} tone="amber">{x}</Badge>)}</span></Row>}
+  <Row l="Confidence"><Badge tone={a.confidence}>{a.confidence}</Badge></Row>
+  {a.links&&a.links.length>0&&<div className="flex flex-wrap gap-1">{a.links.map((l,i)=><span key={i} className="inline-flex items-center gap-1 text-[11px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.5 rounded"><Icon name="link" className="w-3 h-3"/>{l}</span>)}</div>}
+  {a.next&&a.next.length>0&&<div><div className="text-[11px] uppercase font-bold text-slate-400 mb-0.5">Next actions</div><ul className="space-y-0.5">{a.next.map((n,i)=><li key={i} className="flex gap-1.5 text-[12.5px] text-slate-600 dark:text-slate-300"><Icon name="check" className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0"/>{n}</li>)}</ul></div>}
+  {a.fix&&<ProposedFix fix={a.fix} perm={perm}/>}
+ </div>;}
+
+/* ───── Floating AI panel ───── */
+const MODES=["Explain","Debug","Impact","Optimize","What-if"];
+const CTX_Q={dag:"Why did this DAG fail?",task:"Why did this task fail?",issue:"What's the impact and root cause?",table:"Where does this table come from?",metric:"How is this metric calculated?",project:"Summarize the health of this project."};
+function AIPanel({open,onClose,ctx,messages,onAsk,onClear,perm,mode,setMode}){const[input,setInput]=useState("");const end=useRef(null);
+ useEffect(()=>{if(open&&end.current)end.current.scrollIntoView({behavior:"smooth"});},[messages,open]);
+ if(!open)return null;
+ const ctxQ=ctx&&CTX_Q[ctx.type];const quick=ctxQ?[ctxQ,...({Explain:["How is net_revenue calculated?"],Debug:["Which task failed first?"],Impact:["What breaks if I change this?"],Optimize:["Where can this be optimized?"],"What-if":["What if I change the schedule?"]}[mode]||[])]:({Explain:["How is net_revenue calculated?"],Debug:["Why did this DAG fail?"],Impact:["What does changing stg_payment affect?"],Optimize:["Where can this pipeline be optimized?"],"What-if":["What if schedule hourly→daily?"]}[mode]);
+ const send=t=>{if(t){onAsk(t,mode);setInput("");}};
+ return <>
+  <div className="fixed inset-0 bg-slate-900/30 z-40" onClick={onClose}/>
+  <div className="fixed bottom-0 right-0 z-50 w-[40vw] min-w-[420px] max-w-[640px] h-[72vh] bg-white dark:bg-slate-900 border-t border-l border-slate-200 dark:border-slate-800 rounded-tl-2xl shadow-2xl flex flex-col" style={{animation:"slideup .22s ease-out"}}>
+   <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+    <span className="grid place-items-center w-8 h-8 rounded-lg bg-indigo-600 text-white"><Icon name="bot" className="w-4 h-4"/></span>
+    <div className="flex-1"><div className="font-bold text-sm text-slate-800 dark:text-slate-100">DataOps AI</div><div className="text-[11px] text-slate-400">evidence · confidence · next action</div></div>
+    <button onClick={onClear} title="Clear history" className="grid place-items-center w-7 h-7 rounded-lg text-slate-400 hover:text-rose-500"><Icon name="trash" className="w-4 h-4"/></button>
+    <button onClick={onClose} className="grid place-items-center w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600"><Icon name="x" className="w-4 h-4"/></button>
+   </div>
+   <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 flex gap-1 flex-wrap">{MODES.map(m=><button key={m} onClick={()=>setMode(m)} className={`px-2 py-1 rounded-md text-[11px] font-semibold ${mode===m?"bg-indigo-600 text-white":"bg-slate-100 dark:bg-slate-800 text-slate-500"}`}>{m}</button>)}</div>
+   {ctx&&<div className="px-4 py-2 bg-indigo-50 dark:bg-indigo-500/10 border-b border-indigo-100 dark:border-indigo-500/20 flex items-center gap-2 text-[12px]"><Icon name="target" className="w-3.5 h-3.5 text-indigo-500"/><span className="text-indigo-700 dark:text-indigo-300 truncate">Context: <b className="font-mono">{ctx.id}</b> <span className="opacity-60">({ctx.type})</span></span></div>}
+   <div className="flex-1 overflow-y-auto thin p-3 space-y-2.5">{messages.map((m,i)=>m.role==="user"?<div key={i} className="flex justify-end"><div className="bg-indigo-600 text-white rounded-xl rounded-br-sm px-3 py-2 text-[13px] max-w-[85%]">{m.text}</div></div>:<div key={i}><AnswerCard a={m.a} perm={perm}/></div>)}<div ref={end}/></div>
+   <div className="px-3 pt-2 flex flex-wrap gap-1">{quick.map(qq=><button key={qq} onClick={()=>send(qq)} className="text-[11px] px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600">{qq}</button>)}</div>
+   <div className="p-3 flex gap-2"><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send(input)} placeholder={`Ask (${mode})…`} className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40"/><Btn onClick={()=>send(input)}><Icon name="send" className="w-4 h-4"/></Btn></div>
+  </div>
+ </>;}
+
+/* ───── detail pages ───── */
+const Crumb=({items})=><div className="flex items-center gap-1.5 text-[12px] text-slate-400 mb-3">{items.map((it,i)=><React.Fragment key={i}>{i>0&&<Icon name="chevron" className="w-3 h-3"/>}<button onClick={it.go} className={i===items.length-1?"text-slate-600 dark:text-slate-300 font-semibold":"hover:text-indigo-600"}>{it.label}</button></React.Fragment>)}</div>;
+
+function DagDetail({id,open,ai}){const d=DAGS[id];if(!d)return null;const pct=Math.min(100,Math.round((d.runtime/d.baseline)*100));
+ return <div className="space-y-4">
+  <Card className="p-5"><H icon="workflow" sub={`project ${d.project} · owner ${d.owner}`} right={<Badge tone={d.status}>{d.status}</Badge>}>{d.id}</H>
+   <div className="grid sm:grid-cols-2 gap-x-6"><Field label="Schedule">{d.schedule}</Field><Field label="SLA">{d.sla}</Field><Field label="Last run">{d.last}</Field><Field label="Next run">{d.next}</Field><Field label="Runtime vs baseline">{d.runtime}/{d.baseline}m ({pct}%)</Field><Field label="Success (7d)">{d.success7} · {d.failed7} failed</Field><Field label="Input tables">{d.inputs.map(t=>TABLES[t]?<button key={t} onClick={()=>open("table",t)} className="text-indigo-600 hover:underline mr-2">{t}</button>:<span key={t} className="mr-2 text-slate-500">{t}</span>)}</Field><Field label="Output tables">{d.outputs.map(t=>TABLES[t]?<button key={t} onClick={()=>open("table",t)} className="text-indigo-600 hover:underline mr-2">{t}</button>:<span key={t} className="mr-2">{t}</span>)}</Field></div>
+   <div className="mt-3"><AskBtn onClick={()=>ai({type:"dag",id:d.id,dag:d.id,cause:(d.tasks.find(t=>t.status==="failed")||{}).cause},CTX_Q.dag)}/></div>
+  </Card>
+  <Card className="p-5"><H icon="workflow">Tasks (current run)</H><div className="space-y-1.5">{d.tasks.map(t=><button key={t.id} onClick={()=>t.status==="failed"&&open("task",{dag:d.id,...t})} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg border ${t.status==="failed"?"border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/5":"border-slate-100 dark:border-slate-800"}`}><Dot tone={t.status} pulse={t.status==="running"}/><span className="font-mono text-[13px] flex-1 text-left text-slate-700 dark:text-slate-200">{t.id}</span>{t.error&&<span className="text-[11px] text-rose-500 truncate hidden sm:block max-w-[40%]">{t.error}</span>}<Badge tone={t.status}>{t.status}</Badge></button>)}</div></Card>
+  <Card className="p-5"><H icon="clock" sub="run history">Run History</H><table className="w-full text-[13px]"><tbody>{d.runs.map((r,i)=><tr key={i} className="border-b border-slate-50 dark:border-slate-800/50"><td className="py-2 text-slate-500">{r[0]}</td><td><Badge tone={r[1]}>{r[1]}</Badge></td><td className="text-slate-500 text-right">{r[2]}</td></tr>)}</tbody></table></Card>
+ </div>;}
+
+function TaskDetail({task,ai,perm}){const logs=({map_refund:[["04:00:03","INFO","task map_refund started"],["04:00:31","ERROR","dbt test accepted_values(refund_status) failed: found PARTIAL_REFUND"]],call_stripe_api:[["03:02:01","ERROR","HTTP 429 Too Many Requests: rate limit exceeded"],["03:02:01","ERROR","failed after 3 retries"]],compile_stg_orders:[["02:30:55","ERROR","Schema mismatch in stg_orders: required column 'order_channel' added"]]})[task.id]||[["—","INFO","no log"]];
+ const fix=task.id==="map_refund"?FIXES.map_refund:null;const tcol={INFO:"text-slate-400",WARN:"text-amber-500",ERROR:"text-rose-500"};
+ return <div className="space-y-4">
+  <Card className="p-5"><H icon="alert" sub={`DAG ${task.dag}`} right={<Badge tone={task.status}>{task.status}</Badge>}>{task.id}</H>
+   <Field label="Error summary"><span className="text-rose-600 dark:text-rose-400">{task.error}</span></Field><Field label="Suspected class">{task.cause}</Field>
+   <div className="mt-2"><AskBtn onClick={()=>ai({type:"task",id:task.id,dag:task.dag,cause:task.cause},CTX_Q.task)}/></div></Card>
+  <Card className="p-5"><H icon="code" sub="logs in task context (not a separate menu)">Highlighted Logs</H>
+   <div className="rounded-lg bg-slate-950 text-slate-200 font-mono text-[12px] p-3 space-y-1 overflow-x-auto thin">{logs.map((l,i)=><div key={i} className="flex gap-3 whitespace-nowrap"><span className="text-slate-500">{l[0]}</span><span className={`font-bold ${tcol[l[1]]}`}>{l[1]}</span><span>{l[2]}</span></div>)}</div></Card>
+  {fix&&<Card className="p-5"><H icon="spark" sub="AI detected a fixable error — review before applying">Suggested Fix</H><ProposedFix fix={fix} perm={perm}/></Card>}
+ </div>;}
+
+function IssueDetail({id,open,ai}){const it=ISSUES[id];if(!it)return null;
+ return <div className="space-y-4">
+  <Card className="p-5"><H icon="alert" sub={`${it.type} · detected ${it.detected}`} right={<span className="flex gap-1.5"><Badge tone={it.status}>{it.status}</Badge><Badge tone={it.sev}>{it.sev}</Badge></span>}>{it.title}</H>
+   <Field label="Suspected cause">{it.cause}</Field><Field label="Related DAG"><button onClick={()=>open("dag",it.dag)} className="text-indigo-600 hover:underline">{it.dag}</button></Field><Field label="Affected table"><button onClick={()=>TABLES[it.table]&&open("table",it.table)} className="text-indigo-600 hover:underline">{it.table}</button></Field>
+   <div className="mt-2"><AskBtn onClick={()=>ai({type:"issue",id:it.id,dag:it.dag,cause:it.cause},CTX_Q.issue)}/></div></Card>
+  <div className="grid md:grid-cols-2 gap-4">
+   <Card className="p-5"><H icon="check">Evidence</H><ul className="space-y-1">{it.evidence.map((e,i)=><li key={i} className="text-[13px] text-slate-600 dark:text-slate-300 flex gap-1.5"><Icon name="check" className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0"/>{e}</li>)}</ul></Card>
+   <Card className="p-5"><H icon="target" sub="impact section (embedded, not a separate menu)">Affected assets</H><div className="space-y-1.5 text-[13px]"><div>Tables: {it.affected.tables.map(x=><Badge key={x} tone="amber">{x}</Badge>)}</div><div>Metrics: {it.affected.metrics.length?it.affected.metrics.map(x=><Badge key={x} tone="amber">{x}</Badge>):"—"}</div><div>Dashboards: {it.affected.dashboards.length?it.affected.dashboards.map(x=><Badge key={x} tone="amber">{x}</Badge>):"—"}</div></div></Card>
+  </div>
+  <Card className="p-5"><H icon="spark" sub="AI-suggested rule to catch this earlier">Proposed Data Quality Rule</H><div className="font-mono text-[13px] bg-slate-50 dark:bg-slate-800/60 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-200">{it.suggestedRule}</div><div className="mt-2"><Btn variant="ghost" className="!py-1.5 text-xs"><Icon name="code" className="w-3.5 h-3.5"/>Create rule draft</Btn></div></Card>
+  <Card className="p-5"><H icon="network" sub="embedded lineage to assess impact">Lineage</H><Lineage onSelect={(n)=>TABLES[n]&&open("table",n)}/></Card>
+ </div>;}
+
+function TableDetail({id,open,ai}){const t=TABLES[id];if(!t)return null;
+ return <div className="space-y-4">
+  <Card className="p-5"><H icon="db" sub={`${t.schema} · ${t.layer} · owner ${t.owner}`} right={<Badge tone={t.fresh}>{t.fresh}</Badge>}>{t.name}</H>
+   <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">{t.desc}</p>
+   <div className="grid sm:grid-cols-2 gap-x-6"><Field label="Updated">{t.updated}</Field><Field label="Rows">{t.rows}</Field><Field label="Produced by DAG"><button onClick={()=>DAGS[t.dag]&&open("dag",t.dag)} className="text-indigo-600 hover:underline">{t.dag}</button></Field><Field label="Project">{t.project}</Field><Field label="Upstream">{t.upstream.join(", ")}</Field><Field label="Downstream">{t.downstream.map(x=>(TABLES[x]||METRICS[x])?<button key={x} onClick={()=>open(METRICS[x]?"metric":"table",x)} className="text-indigo-600 hover:underline mr-2">{x}</button>:<span key={x} className="mr-2">{x}</span>)}</Field></div>
+   <div className="mt-2"><AskBtn onClick={()=>ai({type:"table",id:t.name},CTX_Q.table)}/></div></Card>
+  {t.cols.length>0&&<Card className="p-5"><H icon="grid">Schema</H><table className="w-full text-[13px]"><thead><tr className="text-left text-[11px] uppercase text-slate-400 border-b border-slate-100 dark:border-slate-800"><th className="py-1.5">Column</th><th>Type</th><th>Note</th></tr></thead><tbody>{t.cols.map((c,i)=><tr key={i} className="border-b border-slate-50 dark:border-slate-800/50"><td className="py-1.5 font-mono text-slate-700 dark:text-slate-200">{c[0]}</td><td className="text-slate-500">{c[1]}</td><td className="text-slate-400">{c[2]}</td></tr>)}</tbody></table></Card>}
+  {t.issues.length>0&&<Card className="p-5"><H icon="alert">Related issues</H>{t.issues.map(i=>ISSUES[i]&&<button key={i} onClick={()=>open("issue",i)} className="block text-left text-[13px] text-indigo-600 hover:underline">{ISSUES[i].title}</button>)}</Card>}
+  <Card className="p-5"><H icon="network">Lineage</H><Lineage onSelect={(n)=>TABLES[n]&&open("table",n)}/></Card>
+ </div>;}
+
+function MetricDetail({id,ai}){const m=METRICS[id];if(!m)return null;
+ return <Card className="p-5 space-y-1"><H icon="activity" sub={`grain ${m.grain} · owner ${m.owner}`}>{m.name}</H>
+  <Field label="Business def">{m.def}</Field><Field label="Formula"><code className="text-indigo-600 dark:text-indigo-400">{m.formula}</code></Field><Field label="Source tables">{m.tables.join(", ")}</Field><Field label="DAG">{m.dag}</Field><Field label="Dashboards">{m.dashboards.join(", ")}</Field>
+  <div className="text-[11px] uppercase font-bold text-slate-400 mt-2 mb-1">SQL logic</div><pre className="bg-slate-950 text-slate-200 rounded-lg p-2.5 text-[11.5px] font-mono overflow-x-auto thin whitespace-pre-wrap">{m.sql}</pre>
+  <div className="mt-2"><AskBtn onClick={()=>ai({type:"metric",id:m.name},CTX_Q.metric)}/></div>
+ </Card>;}
+
+function ProjectDoc({id,open}){const p=PROJECTS[id];if(!p)return null;
+ return <div className="space-y-4">
+  <Card className="p-5"><H icon="book" sub={`owner ${p.owner} · ${p.channel} · ${p.criticality}`} right={<Badge tone={p.health==="degraded"?"amber":"emerald"}>{p.health}</Badge>}>{p.name}</H>
+   <p className="text-sm text-slate-600 dark:text-slate-300">{p.purpose}</p>
+   <div className="mt-2 flex items-center gap-3 text-[12px] text-slate-500"><span>SLA {p.sla}</span><span>·</span><span>Docs {p.docPct}%</span><div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 max-w-[160px]"><div className="h-full rounded-full bg-indigo-500" style={{width:p.docPct+"%"}}/></div></div></Card>
+  <div className="grid md:grid-cols-3 gap-4">
+   <Card className="p-5"><H icon="workflow">DAGs</H>{p.dags.map(d=><button key={d} onClick={()=>open("dag",d)} className="flex items-center gap-2 w-full text-left text-[13px] py-1 hover:text-indigo-600"><Dot tone={DAGS[d]?DAGS[d].status:"slate"}/>{d}</button>)}</Card>
+   <Card className="p-5"><H icon="db">Tables</H>{p.tables.map(t=><button key={t} onClick={()=>TABLES[t]&&open("table",t)} className="block text-left text-[13px] py-1 hover:text-indigo-600 font-mono">{t}</button>)}</Card>
+   <Card className="p-5"><H icon="alert">Open issues</H>{p.issues.map(i=>ISSUES[i]&&<button key={i} onClick={()=>open("issue",i)} className="block text-left text-[13px] py-1 hover:text-indigo-600">{ISSUES[i].title}</button>)}</Card>
+  </div>
+  <Card className="p-5"><H icon="network" sub="project-level lineage">Lineage</H><Lineage onSelect={(n)=>TABLES[n]&&open("table",n)}/></Card>
+ </div>;}
+
+/* ───── Operations Overview (Grafana-style) ───── */
+function Overview({open,ai,go}){const st=OVR.status;const total=Object.values(st).reduce((a,b)=>a+b,0);
+ const KPI=[["Total runs",total,"slate"],["Success rate",Math.round(st.success/total*100)+"%","emerald"],["Failed",st.failed,"rose"],["Running",st.running,"indigo"],["Retry",st.retry,"amber"],["Delayed",st.delayed,"amber"],["Skipped",st.skipped,"slate"],["SLA on-time",OVR.sla+"%","emerald"],["Stale tables",OVR.staleTables.length,"amber"],["Open DQ issues",Object.keys(ISSUES).length,"rose"],["Schema changes",OVR.schemaChanges.length,"amber"],["Cost today","$"+OVR.cost.today,"slate"]];
+ const Panel=({icon,title,sub,children,right})=><Card className="p-5"><H icon={icon} sub={sub} right={right}>{title}</H>{children}</Card>;
+ return <div className="space-y-5">
+  {/* KPI strip */}
+  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">{KPI.map(k=><Card key={k[0]} className="p-3.5"><div className="text-[11px] text-slate-400 font-medium">{k[0]}</div><div className={`text-xl font-extrabold mt-1 text-${k[2]}-500`}>{k[1]}</div></Card>)}</div>
+
+  <div className="grid xl:grid-cols-3 gap-5">
+   <Panel icon="workflow" title="Pipeline Activity" sub="runs by hour (today)" right={<span className="flex gap-2 text-[10px]">{[["success","#10b981"],["failed","#f43f5e"],["retry","#f59e0b"],["running","#6366f1"]].map(([k,c])=><span key={k} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:c}}/>{k}</span>)}</span>}><HourStack buckets={OVR.runsByHour}/></Panel>
+   <Panel icon="gauge" title="Run Status Breakdown" sub="today"><div className="flex items-center gap-4"><Donut segs={[{value:st.success,color:"#10b981"},{value:st.failed,color:"#f43f5e"},{value:st.retry,color:"#f59e0b"},{value:st.running,color:"#6366f1"},{value:st.delayed,color:"#94a3b8"}]}/><div className="text-[12px] space-y-1">{[["Success",st.success,"emerald"],["Failed",st.failed,"rose"],["Retry",st.retry,"amber"],["Running",st.running,"indigo"]].map(r=><div key={r[0]} className="flex items-center gap-2"><Dot tone={r[2]}/><span className="text-slate-500 w-16">{r[0]}</span><b className="text-slate-700 dark:text-slate-200">{r[1]}</b></div>)}</div></div></Panel>
+   <Panel icon="clock" title="SLA Compliance" sub="on-time pipeline runs"><div className="flex items-center gap-4"><Gauge pct={OVR.sla}/><div className="text-[12px] space-y-1"><div className="text-slate-400">Breaches</div>{OVR.staleTables.map(s=><div key={s.name} className="font-mono text-rose-500">{s.name} <span className="text-slate-400">{s.since} late</span></div>)}</div></div></Panel>
+  </div>
+
+  <div className="grid xl:grid-cols-3 gap-5">
+   <Panel icon="db" title="Data Freshness" sub="last 5 runs per table (green=ok)"><Heat rows={OVR.freshness}/></Panel>
+   <Panel icon="activity" title="Data Quality" sub="pass-rate 7d + open issues by type" right={<span className="text-[12px] text-slate-400">pass {OVR.dqTrend[OVR.dqTrend.length-1]}%</span>}><Spark data={OVR.dqTrend} w={240} h={36} color="#10b981"/><div className="mt-3"><HBars items={OVR.issuesByType.map(i=>({...i,onClick:()=>go("dq")}))}/></div></Panel>
+   <Panel icon="alert" title="Failure Analysis" sub="today's failures by category"><HBars items={OVR.errors}/></Panel>
+  </div>
+
+  <div className="grid xl:grid-cols-3 gap-5">
+   <Panel icon="gauge" title="Performance & Runtime" sub="top runtime vs baseline"><HBars items={OVR.slowest.map(s=>({label:s.label,value:s.value,color:s.value>=s.base?"#f43f5e":"#6366f1",onClick:()=>open("dag",s.label)}))} fmt={i=>`${i.value}m`}/><div className="mt-2 text-[11px] text-slate-400">Duration trend (7d)</div><Spark data={OVR.durationTrend} w={240} h={32}/></Panel>
+   <Panel icon="dollar" title="Cost & Compute" sub="sample — wire to warehouse billing" right={<span className={`text-[12px] font-semibold ${OVR.cost.today>OVR.cost.yesterday?"text-rose-500":"text-emerald-500"}`}>{OVR.cost.today>OVR.cost.yesterday?"▲":"▼"} vs ${OVR.cost.yesterday}</span>}><div className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">${OVR.cost.today}<span className="text-xs text-slate-400 font-medium"> today</span></div><div className="mt-3 text-[11px] text-slate-400 mb-1">Top expensive DAGs</div><HBars items={OVR.cost.top.map(t=>({...t,color:"#8b5cf6",onClick:()=>DAGS[t.label]&&open("dag",t.label)}))} fmt={i=>`$${i.value}`}/></Panel>
+   <Panel icon="layers" title="Schema & Volume" sub="recent schema changes + volume anomalies"><div className="space-y-1.5">{OVR.schemaChanges.map((c,i)=><div key={i} className="flex items-center gap-2 text-[12px]"><Badge tone={c.breaking?"high":"low"}>{c.breaking?"breaking":"safe"}</Badge><span className="font-mono text-slate-600 dark:text-slate-300 truncate">{c.asset}</span><span className="text-slate-400 truncate hidden sm:block">{c.change}</span></div>)}</div><div className="mt-3 space-y-1.5">{OVR.volume.map(v=><div key={v.name} className="flex items-center justify-between"><span className="font-mono text-[11px] text-slate-500">{v.name}</span><Spark data={v.series} w={120} h={26} color={Math.min(...v.series)< Math.max(...v.series)*0.5?"#f43f5e":"#0ea5e9"}/></div>)}</div></Panel>
+  </div>
+
+  <div className="grid xl:grid-cols-3 gap-5">
+   <Panel icon="book" title="Domain / Project Health" sub="health score by project"><div className="space-y-2.5">{OVR.projectHealth.map(p=><button key={p.id} onClick={()=>open("project",p.id)} className="w-full text-left"><div className="flex justify-between text-[12px] mb-0.5"><span className="font-semibold text-slate-700 dark:text-slate-200">{p.name}</span><span className="text-slate-400">{p.score}/100 · {p.issues} issues</span></div><div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full" style={{width:p.score+"%",background:p.score>=80?"#10b981":p.score>=65?"#f59e0b":"#f43f5e"}}/></div></button>)}</div></Panel>
+   <Card className="p-5 xl:col-span-2"><H icon="clock" sub="today's events — click to drill down">Event Timeline (today)</H><div className="space-y-1">{OVR.events.map((e,i)=><div key={i} className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/40"><span className="font-mono text-[11px] text-slate-400 w-12">{e[0]}</span><Dot tone={e[2]}/><span className="flex-1 text-[13px] text-slate-700 dark:text-slate-200">{e[1]}</span>{e[3]&&ISSUES[e[3]]&&<button onClick={()=>open("issue",e[3])} className="text-[11px] text-indigo-600 hover:underline">open</button>}{e[3]&&ISSUES[e[3]]&&<AskBtn onClick={()=>ai({type:"issue",id:e[3],dag:ISSUES[e[3]].dag,cause:ISSUES[e[3]].cause},CTX_Q.issue)}/>}</div>)}</div></Card>
+  </div>
+ </div>;}
+
+/* ───── list modules ───── */
+function DagList({open,ai}){return <Card className="p-5"><H icon="workflow" sub="Airflow / Dagster / Prefect">DAG List</H>
+ <div className="overflow-x-auto thin"><table className="w-full text-sm"><thead><tr className="text-left text-[11px] uppercase text-slate-400 border-b border-slate-100 dark:border-slate-800"><th className="py-2 pr-3">DAG</th><th className="pr-3">Status</th><th className="pr-3">Runtime</th><th className="pr-3">Success (7d)</th><th className="pr-3">Owner</th><th></th></tr></thead><tbody>
+  {Object.values(DAGS).map(d=><tr key={d.id} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/40"><td className="py-2.5 pr-3"><button onClick={()=>open("dag",d.id)} className="font-mono text-[13px] text-indigo-600 hover:underline">{d.id}</button></td><td className="pr-3"><span className="flex items-center gap-1.5"><Dot tone={d.status} pulse={d.status==="running"}/><Badge tone={d.status}>{d.status}</Badge></span></td><td className="pr-3 text-[12px] text-slate-500">{d.runtime}/{d.baseline}m</td><td className="pr-3 text-[12px] text-slate-500">{d.success7}</td><td className="pr-3 text-[12px] text-slate-500">{d.owner}</td><td>{d.status==="failed"&&<AskBtn onClick={()=>ai({type:"dag",id:d.id,dag:d.id,cause:(d.tasks.find(t=>t.status==="failed")||{}).cause},CTX_Q.dag)}/>}</td></tr>)}
+ </tbody></table></div></Card>;}
+
+function IssueList({open,ai}){return <Card className="p-5"><H icon="activity" sub="Data Quality · Freshness · Schema · Incidents — unified">Data Quality & Issues</H>
+ <div className="space-y-2">{Object.values(ISSUES).map(i=><div key={i.id} className="rounded-lg border border-slate-100 dark:border-slate-800 p-3 hover:border-indigo-300"><div className="flex items-center justify-between"><button onClick={()=>open("issue",i.id)} className="flex items-center gap-2 text-left"><Icon name="alert" className={`w-4 h-4 text-${MAP[i.sev]}-500`}/><span className="font-semibold text-slate-700 dark:text-slate-200">{i.title}</span><Badge tone={i.status}>{i.status}</Badge></button><span className="flex items-center gap-2"><Badge tone={i.sev}>{i.sev}</Badge><AskBtn onClick={()=>ai({type:"issue",id:i.id,dag:i.dag,cause:i.cause},CTX_Q.issue)}/></span></div><div className="text-[12px] text-slate-400 mt-1">{i.type} · {i.table} · {i.dag} · {i.detected}</div></div>)}</div></Card>;}
+
+function CatalogList({open}){return <div className="space-y-5">
+ <Card className="p-5"><H icon="book" sub="living documentation by project/domain">Projects</H><div className="grid sm:grid-cols-2 gap-3">{Object.values(PROJECTS).map(p=><button key={p.id} onClick={()=>open("project",p.id)} className="text-left rounded-lg border border-slate-100 dark:border-slate-800 p-3.5 hover:border-indigo-300"><div className="flex items-center justify-between"><span className="font-bold text-slate-700 dark:text-slate-200">{p.name}</span><Badge tone={p.health==="degraded"?"amber":"emerald"}>{p.health}</Badge></div><p className="text-[12px] text-slate-400 mt-1">{p.purpose}</p><div className="text-[11px] text-slate-400 mt-2">{p.dags.length} DAGs · {p.tables.length} tables · {p.metrics.length} metrics</div></button>)}</div></Card>
+ <div className="grid md:grid-cols-2 gap-5"><Card className="p-5"><H icon="db">Tables</H>{Object.values(TABLES).map(t=><button key={t.name} onClick={()=>open("table",t.name)} className="flex items-center justify-between w-full text-left py-1.5 text-[13px] hover:text-indigo-600"><span className="font-mono">{t.name}</span><Badge tone={t.fresh}>{t.fresh}</Badge></button>)}</Card>
+ <Card className="p-5"><H icon="activity">Metrics</H>{Object.values(METRICS).map(m=><button key={m.name} onClick={()=>open("metric",m.name)} className="block w-full text-left py-1.5 text-[13px] hover:text-indigo-600 font-mono">{m.name}</button>)}</Card></div>
+</div>;}
+
+function LineageModule({open}){return <Card className="p-5"><H icon="network" sub="search · filter · depth · embedded across the app">Lineage</H>
+ <div className="flex flex-wrap gap-2 mb-3 text-[12px]"><span className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">project: finance_revenue</span><span className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">depth: 3 hops</span><span className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">type: all</span></div>
+ <Lineage onSelect={(n)=>TABLES[n]?open("table",n):METRICS[n]?open("metric",n):null} height={230}/>
+ <div className="flex gap-3 mt-2 flex-wrap text-[11px]">{Object.entries(LC).map(([k,c])=><span key={k} className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full" style={{background:c}}/>{k}</span>)}</div></Card>;}
+
+function SqlModule({ai,perm}){const[q,setQ]=useState("SELECT SUM(total_revenue) FROM mart_revenue_daily WHERE dt = current_date");const[res,setRes]=useState(null);
+ return <div className="space-y-4"><Card className="p-5"><H icon="code" sub="quick analysis · validate · AI suggested fix">SQL & Analysis</H>
+  <textarea value={q} onChange={e=>setQ(e.target.value)} rows={4} className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-950 text-slate-100 font-mono text-[13px] p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"/>
+  <div className="flex gap-2 mt-2"><Btn onClick={()=>setRes("run")}><Icon name="play" className="w-4 h-4"/>Run</Btn><Btn variant="ghost"><Icon name="spark" className="w-4 h-4"/>Format</Btn><AskBtn onClick={()=>setRes("fix")}/></div>
+  {res==="run"&&<div className="mt-3 text-[13px] text-rose-600 dark:text-rose-400 flex items-center gap-2"><Icon name="x" className="w-4 h-4"/>Error: column "total_revenue" does not exist</div>}
+ </Card>
+ {res==="fix"&&<Card className="p-5"><H icon="spark" sub="AI analyzes syntax · table · column · schema">Suggested Fix</H><ProposedFix fix={FIXES.sql_col} perm={perm}/></Card>}
+</div>;}
+
+/* ───── Sidebar + Topbar ───── */
+const NAV=[["health","Operations Overview","grid"],["dag","DAG Operations","workflow"],["dq","Data Quality & Issues","activity"],["catalog","Projects / Catalog","book"],["lineage","Lineage","network"],["sql","SQL & Analysis","code"]];
+function Sidebar({mod,go,dark,setDark}){return <aside className="w-60 shrink-0 h-screen sticky top-0 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+ <div className="px-4 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2.5"><span className="grid place-items-center w-9 h-9 rounded-xl bg-indigo-600 text-white"><Icon name="layers" className="w-5 h-5"/></span><div><div className="flex items-center gap-1.5"><span className="font-extrabold text-sm text-slate-800 dark:text-white">DataOps</span><span className="text-[9px] font-bold uppercase px-1 py-0.5 rounded bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300">Ent</span></div><span className="text-[10px] text-slate-400">Workspace</span></div></div>
+ <nav className="px-2.5 py-3 space-y-0.5 flex-1">{NAV.map(([k,l,ic])=><button key={k} onClick={()=>go(k)} className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-[13px] font-medium ${mod===k?"bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300":"text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}><Icon name={ic} className="w-[17px] h-[17px]"/>{l}</button>)}</nav>
+ <div className="px-3 py-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"><span className="text-[11px] text-slate-400 truncate">tramdnq@vng.com.vn</span><button onClick={()=>setDark(d=>!d)} className="grid place-items-center w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-indigo-600"><Icon name={dark?"sun":"moon"} className="w-4 h-4"/></button></div>
+</aside>;}
+const PERM_LABEL={1:"L1 Read-only",2:"L2 Draft",3:"L3 Approval",4:"L4 Prod-restricted"};
+function Topbar({perm,setPerm}){return <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-6 py-2.5 flex items-center gap-3">
+ <div className="relative flex-1 max-w-md"><Icon name="search" className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"/><input placeholder="Search projects, DAGs, tables, metrics, issues, owners…" className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40"/></div>
+ <select className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-2.5 py-1.5 text-[12px]"><option>prod</option><option>staging</option><option>dev</option></select>
+ <select className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-2.5 py-1.5 text-[12px]"><option>Today</option><option>Last 24h</option><option>Last 7d</option></select>
+ <select value={perm} onChange={e=>setPerm(+e.target.value)} title="Permission mode" className="rounded-lg border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 px-2.5 py-1.5 text-[12px] font-semibold">{Object.entries(PERM_LABEL).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>
+ <button className="relative grid place-items-center w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500"><Icon name="bell" className="w-4 h-4"/><span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500"/></button>
+ <span className="grid place-items-center w-8 h-8 rounded-full bg-indigo-600 text-white text-[12px] font-bold">T</span>
+</div>;}
+
+/* ───── App ───── */
+const MOD_TITLE=Object.fromEntries(NAV.map(([k,l])=>[k,l]));
+const INTRO={role:"ai",a:{summary:"DataOps AI — pick an object or ask about lineage, failures, impact, or SQL.",confidence:"High",next:[]}};
+function App(){const[mod,setMod]=useState("health");const[detail,setDetail]=useState(null);const[ctx,setCtx]=useState(null);const[dark,setDark]=useState(false);const[perm,setPerm]=useState(2);
+ const[aiOpen,setAiOpen]=useState(false);const[mode,setMode]=useState("Explain");
+ const[messages,setMessages]=useState(()=>{try{const s=sessionStorage.getItem("dataops_chat_v2");return s?JSON.parse(s):[INTRO];}catch(e){return [INTRO];}});
+ useEffect(()=>{try{sessionStorage.setItem("dataops_chat_v2",JSON.stringify(messages));}catch(e){}},[messages]);
+ useEffect(()=>{document.documentElement.classList.toggle("dark",dark);document.body.className=dark?"bg-slate-950":"bg-slate-100";},[dark]);
+ const go=(m)=>{setMod(m);setDetail(null);setCtx(null);};
+ const open=(type,id)=>{setDetail({type,id});if(typeof id==="string")setCtx({type,id});window.scrollTo&&window.scrollTo(0,0);};
+ const askInternal=(text,m)=>{const a=buildAnswer(text,ctx,m||mode);setMessages(p=>[...p,{role:"user",text},{role:"ai",a}]);};
+ const ai=(context,seedQ)=>{if(context)setCtx(context);setAiOpen(true);if(seedQ){const a=buildAnswer(seedQ,context||ctx,mode);setMessages(p=>[...p,{role:"user",text:seedQ},{role:"ai",a}]);}};
+ const clear=()=>setMessages([INTRO]);
+ let body;
+ if(detail){const{type,id}=detail;const crumbBase=[{label:MOD_TITLE[mod],go:()=>{setDetail(null);setCtx(null);}}];
+  if(type==="dag")body=<><Crumb items={[...crumbBase,{label:id}]}/><DagDetail id={id} open={open} ai={ai}/></>;
+  else if(type==="task")body=<><Crumb items={[{label:"DAG Operations",go:()=>go("dag")},{label:id.dag,go:()=>open("dag",id.dag)},{label:id.id}]}/><TaskDetail task={id} ai={ai} perm={perm}/></>;
+  else if(type==="issue")body=<><Crumb items={[...crumbBase,{label:ISSUES[id]?ISSUES[id].title:id}]}/><IssueDetail id={id} open={open} ai={ai}/></>;
+  else if(type==="table")body=<><Crumb items={[...crumbBase,{label:id}]}/><TableDetail id={id} open={open} ai={ai}/></>;
+  else if(type==="metric")body=<><Crumb items={[...crumbBase,{label:id}]}/><MetricDetail id={id} ai={ai}/></>;
+  else if(type==="project")body=<><Crumb items={[...crumbBase,{label:PROJECTS[id]?PROJECTS[id].name:id}]}/><ProjectDoc id={id} open={open}/></>;
+ } else {
+  body={health:<Overview open={open} ai={ai} go={go}/>,dag:<DagList open={open} ai={ai}/>,dq:<IssueList open={open} ai={ai}/>,catalog:<CatalogList open={open}/>,lineage:<LineageModule open={open}/>,sql:<SqlModule ai={ai} perm={perm}/>}[mod];
+ }
+ return <div className="flex min-h-screen text-slate-900 dark:text-slate-100">
+  <Sidebar mod={mod} go={go} dark={dark} setDark={setDark}/>
+  <div className="flex-1 min-w-0 flex flex-col">
+   <Topbar perm={perm} setPerm={setPerm}/>
+   <main className="flex-1 px-6 py-5 overflow-x-hidden"><div className="mb-4"><h1 className="text-lg font-extrabold text-slate-900 dark:text-white">{detail?detail.type[0].toUpperCase()+detail.type.slice(1)+" detail":MOD_TITLE[mod]}</h1></div>{body}</main>
+  </div>
+  {/* Floating AI */}
+  <div className="fixed bottom-6 right-6 z-40 group">
+   {!aiOpen&&<span className="absolute right-16 bottom-3.5 whitespace-nowrap bg-slate-900 text-white text-xs px-2.5 py-1.5 rounded-lg shadow opacity-0 group-hover:opacity-100 transition pointer-events-none">Ask DataOps AI</span>}
+   <button onClick={()=>setAiOpen(o=>!o)} className="w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl shadow-indigo-600/30 grid place-items-center transition-transform hover:scale-105"><Icon name={aiOpen?"x":"bot"} className="w-6 h-6"/></button>
+  </div>
+  <AIPanel open={aiOpen} onClose={()=>setAiOpen(false)} ctx={ctx} messages={messages} onAsk={askInternal} onClear={clear} perm={perm} mode={mode} setMode={setMode}/>
+ </div>;}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

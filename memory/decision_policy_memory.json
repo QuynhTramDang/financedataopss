@@ -1,0 +1,20 @@
+[
+  {
+    "decision_id": "FIN-REV-2026-001",
+    "metric": "net_revenue",
+    "topic": "Revenue Definition",
+    "decision": "Net revenue = paid_amount - refunded_amount",
+    "approved_by": "Finance Manager",
+    "effective_from": "2026-01-01",
+    "approval_rule": "Any change to Finance metric logic requires Finance Owner approval"
+  },
+  {
+    "decision_id": "FIN-REV-2026-002",
+    "metric": "net_revenue",
+    "topic": "Refund handling",
+    "decision": "PARTIAL_REFUND should be included in refunded_amount",
+    "approved_by": "Finance Manager",
+    "effective_from": "2026-06-01",
+    "approval_rule": "Any change to Finance metric logic requires Finance Owner approval"
+  }
+]

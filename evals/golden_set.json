@@ -1,0 +1,72 @@
+[
+  {
+    "case_id": "CASE-001",
+    "input": "Revenue report 2026-06-07 lệch 2.1% so với payment dashboard",
+    "date": "2026-06-07",
+    "expected_anomaly": "enum_drift",
+    "expected_route": "confident",
+    "expected_tools": ["sql_profile", "enum_drift_check", "code_search"],
+    "expected_patch_contains": "PARTIAL_REFUND",
+    "expected_final_status": "ready_for_approval"
+  },
+  {
+    "case_id": "CASE-002",
+    "input": "Revenue report 2026-06-08 nghi có vấn đề dữ liệu",
+    "date": "2026-06-08",
+    "expected_anomaly": "null_spike",
+    "expected_route": "escalate",
+    "expected_tools": ["null_check"],
+    "expected_patch_contains": null,
+    "expected_final_status": "escalated"
+  },
+  {
+    "case_id": "CASE-003",
+    "input": "Revenue report 2026-06-09 không thấy số",
+    "date": "2026-06-09",
+    "expected_anomaly": "missing_partition",
+    "expected_route": "escalate",
+    "expected_tools": ["freshness_check"],
+    "expected_patch_contains": null,
+    "expected_final_status": "escalated"
+  },
+  {
+    "case_id": "CASE-004",
+    "input": "Revenue report 2026-06-10 nghi lệch nhưng chưa rõ",
+    "date": "2026-06-10",
+    "expected_anomaly": null,
+    "expected_route": "escalate",
+    "expected_tools": ["freshness_check", "null_check", "volume_check"],
+    "expected_patch_contains": null,
+    "expected_final_status": "escalated"
+  },
+  {
+    "case_id": "CASE-005",
+    "input": "Revenue report 2026-06-11 nghi bị tính trùng số",
+    "date": "2026-06-11",
+    "expected_anomaly": "duplicate",
+    "expected_route": "escalate",
+    "expected_tools": ["duplicate_check"],
+    "expected_patch_contains": null,
+    "expected_final_status": "escalated"
+  },
+  {
+    "case_id": "CASE-006",
+    "input": "Revenue report 2026-06-13 số liệu bất thường",
+    "date": "2026-06-13",
+    "expected_anomaly": "distribution_drift",
+    "expected_route": "escalate",
+    "expected_tools": ["distribution_drift_check"],
+    "expected_patch_contains": null,
+    "expected_final_status": "escalated"
+  },
+  {
+    "case_id": "CASE-007",
+    "input": "Revenue report 2026-06-14 thiếu nhiều dữ liệu",
+    "date": "2026-06-14",
+    "expected_anomaly": "volume_drop",
+    "expected_route": "escalate",
+    "expected_tools": ["volume_check"],
+    "expected_patch_contains": null,
+    "expected_final_status": "escalated"
+  }
+]

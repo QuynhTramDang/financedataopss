@@ -1,0 +1,54 @@
+[
+  {
+    "incident_id": "INC-2026-0520",
+    "metric": "net_revenue",
+    "issue": "Revenue mismatch caused by refund_status mapping",
+    "symptom": "net_revenue overstated",
+    "root_cause": "New refund_status value was not handled in revenue_daily",
+    "fix": "Update refund mapping logic",
+    "related_pipeline": "revenue_daily",
+    "diagnostic_steps": [
+      "sql_profile refund_status",
+      "code_search revenue_daily.sql",
+      "run revenue reconciliation"
+    ],
+    "approved_by": "Data Owner"
+  },
+  {
+    "incident_id": "INC-2026-06-05-net_cash_flow",
+    "metric": "net_cash_flow",
+    "anomaly_type": "enum_drift",
+    "issue": "net_cash_flow mismatch caused by new settlement_status ['CHARGEBACK']",
+    "symptom": "net_cash_flow overstated",
+    "root_cause": "Source has new value(s) ['CHARGEBACK'], but None only handles [], causing net_cash_flow to be overstated.",
+    "fix": null,
+    "related_pipeline": "dtm_cash_daily",
+    "diagnostic_steps": [
+      "metadata_scan",
+      "sql_profile",
+      "freshness_check",
+      "volume_check",
+      "null_check",
+      "duplicate_check",
+      "distribution_drift_check",
+      "lineage_lookup",
+      "enum_drift_check"
+    ],
+    "runbook_tools": [
+      "metadata_scan",
+      "sql_profile",
+      "freshness_check",
+      "volume_check",
+      "null_check",
+      "duplicate_check",
+      "distribution_drift_check",
+      "lineage_lookup",
+      "enum_drift_check"
+    ],
+    "approval_required": [
+      "Finance Owner",
+      "Data Owner"
+    ],
+    "created_from": "human_approved_rca"
+  }
+]

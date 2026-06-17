@@ -1,0 +1,14 @@
+[
+  {
+    "runbook_id": "RB-REV-MISMATCH",
+    "metric": "net_revenue",
+    "title": "Revenue mismatch investigation",
+    "applies_to": "revenue_daily",
+    "steps": [
+      "check freshness của payment_txn",
+      "check enum drift trong refund_status",
+      "run reconciliation source vs target",
+      "check recent deploy của revenue_daily"
+    ]
+  }
+]

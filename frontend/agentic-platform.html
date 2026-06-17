@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agentic DataOps Platform</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --panel-2: #f9fafb;
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --soft-line: #f0f2f5;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --green: #059669;
+      --green-soft: #ecfdf5;
+      --amber: #b45309;
+      --amber-soft: #fffbeb;
+      --red: #dc2626;
+      --red-soft: #fef2f2;
+      --slate-soft: #f1f5f9;
+      --shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 12px 30px rgba(15, 23, 42, .04);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 248px 1fr; }
+    .sidebar {
+      position: sticky; top: 0; height: 100vh;
+      background: #0f172a; color: #dbeafe;
+      display: flex; flex-direction: column;
+    }
+    .brand { padding: 22px 20px 18px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .brand-mark {
+      width: 34px; height: 34px; border-radius: 8px; background: #2563eb;
+      display: grid; place-items: center; color: white; font-weight: 800; margin-bottom: 12px;
+    }
+    .brand h1 { margin: 0; font-size: 15px; line-height: 1.2; color: white; }
+    .brand p { margin: 5px 0 0; font-size: 12px; color: #94a3b8; }
+    .nav { padding: 14px 10px; display: grid; gap: 3px; }
+    .nav button {
+      width: 100%; text-align: left; color: #cbd5e1; background: transparent; border: 0;
+      padding: 10px 11px; border-radius: 8px; display: flex; gap: 10px; align-items: center;
+      font-size: 13px; font-weight: 600;
+    }
+    .nav button.active { background: rgba(37, 99, 235, .22); color: #fff; }
+    .nav button:hover { background: rgba(255,255,255,.07); color: #fff; }
+    .nav svg { width: 17px; height: 17px; flex: 0 0 auto; }
+    .sidebar-foot {
+      margin-top: auto; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,.08);
+      font-size: 12px; color: #94a3b8;
+    }
+    .main { min-width: 0; }
+    .topbar {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(246, 247, 249, .86); backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 28px; display: flex; align-items: center; gap: 14px;
+    }
+    .search {
+      width: min(520px, 42vw); display: flex; align-items: center; gap: 9px;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px;
+    }
+    .search input { border: 0; outline: 0; background: transparent; width: 100%; color: var(--ink); }
+    .select, .icon-btn {
+      border: 1px solid var(--line); background: var(--panel); color: #374151;
+      border-radius: 9px; padding: 8px 10px;
+    }
+    .icon-btn { width: 36px; height: 36px; display: grid; place-items: center; margin-left: auto; }
+    .content { padding: 26px 28px 42px; max-width: 1480px; }
+    .page-head {
+      display: flex; justify-content: space-between; gap: 22px; align-items: flex-start; margin-bottom: 20px;
+    }
+    .page-head h2 { margin: 0; font-size: 24px; line-height: 1.2; }
+    .page-head p { margin: 7px 0 0; color: var(--muted); font-size: 14px; max-width: 760px; }
+    .primary {
+      border: 0; background: var(--blue); color: white; border-radius: 8px; padding: 9px 13px;
+      font-size: 13px; font-weight: 700; box-shadow: var(--shadow);
+    }
+    .secondary {
+      border: 1px solid var(--line); background: var(--panel); color: #374151; border-radius: 8px;
+      padding: 8px 12px; font-size: 13px; font-weight: 700;
+    }
+    .grid { display: grid; gap: 16px; }
+    .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cols-main { grid-template-columns: minmax(0, 1.4fr) minmax(340px, .6fr); }
+    .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);
+    }
+    .panel-h {
+      padding: 14px 16px; border-bottom: 1px solid var(--soft-line);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .panel-h h3 { margin: 0; font-size: 14px; }
+    .panel-h span { color: var(--muted); font-size: 12px; }
+    .panel-b { padding: 15px 16px; }
+    .metric { padding: 15px 16px; }
+    .metric small { color: var(--muted); font-size: 12px; }
+    .metric strong { display: block; margin-top: 5px; font-size: 24px; line-height: 1.1; }
+    .metric em { font-style: normal; color: var(--muted); font-size: 12px; }
+    .list { display: grid; gap: 8px; }
+    .row {
+      border: 1px solid var(--soft-line); border-radius: 9px; padding: 12px;
+      display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+      background: #fff;
+    }
+    .row:hover { border-color: #bfdbfe; }
+    .row-title { font-size: 13px; font-weight: 750; display: flex; gap: 8px; align-items: center; }
+    .row-sub { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 4px 8px;
+      font-size: 11px; font-weight: 750; white-space: nowrap;
+    }
+    .b-green { color: var(--green); background: var(--green-soft); }
+    .b-red { color: var(--red); background: var(--red-soft); }
+    .b-amber { color: var(--amber); background: var(--amber-soft); }
+    .b-blue { color: var(--blue); background: var(--blue-soft); }
+    .b-slate { color: #475569; background: var(--slate-soft); }
+    .dot { width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      color: var(--muted); font-size: 11px; text-align: left; font-weight: 750;
+      text-transform: uppercase; border-bottom: 1px solid var(--soft-line); padding: 10px 12px;
+    }
+    td { border-bottom: 1px solid var(--soft-line); padding: 11px 12px; font-size: 13px; vertical-align: middle; }
+    tr:hover td { background: #fafafa; }
+    .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 12px; }
+    .split { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; }
+    .trace { display: grid; gap: 0; }
+    .trace-step {
+      display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; padding: 12px 0;
+      border-bottom: 1px solid var(--soft-line);
+    }
+    .trace-step:last-child { border-bottom: 0; }
+    .trace-index {
+      width: 24px; height: 24px; border-radius: 999px; background: var(--slate-soft);
+      display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #475569;
+    }
+    .trace-step.success .trace-index { background: var(--green-soft); color: var(--green); }
+    .trace-step.warn .trace-index { background: var(--amber-soft); color: var(--amber); }
+    .trace-step.fail .trace-index { background: var(--red-soft); color: var(--red); }
+    .trace-main strong { display: block; font-size: 13px; }
+    .trace-main span { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .drawer {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);
+      position: sticky; top: 78px; align-self: start; overflow: hidden;
+    }
+    .drawer .empty { color: var(--muted); font-size: 13px; line-height: 1.5; padding: 18px; }
+    .kv { display: grid; gap: 10px; }
+    .kv div { display: flex; justify-content: space-between; gap: 14px; font-size: 12px; }
+    .kv span { color: var(--muted); }
+    .tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+    .tabs button {
+      border: 0; background: transparent; padding: 10px 11px; font-weight: 750; font-size: 13px;
+      color: var(--muted); border-bottom: 2px solid transparent;
+    }
+    .tabs button.active { color: var(--blue); border-color: var(--blue); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .field input, .field select {
+      width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; background: white;
+    }
+    .canvas {
+      display: grid; grid-template-columns: repeat(5, minmax(130px, 1fr)); align-items: center; gap: 8px;
+      padding: 12px; background: var(--panel-2); border: 1px solid var(--soft-line); border-radius: 10px;
+    }
+    .node {
+      background: white; border: 1px solid var(--line); border-radius: 9px; padding: 11px;
+      min-height: 76px;
+    }
+    .node b { display: block; font-size: 12px; }
+    .node span { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; }
+    .arrow { text-align: center; color: #94a3b8; font-weight: 800; }
+    @media (max-width: 1100px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: relative; height: auto; }
+      .nav { grid-template-columns: repeat(2, 1fr); }
+      .cols-4, .cols-3, .cols-main, .split { grid-template-columns: 1fr; }
+      .search { width: 100%; }
+      .topbar { flex-wrap: wrap; }
+      .canvas { grid-template-columns: 1fr; }
+      .arrow { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <h1>Agentic DataOps Platform</h1>
+        <p>Controlled automation for data teams</p>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="sidebar-foot">
+        <div>Workspace: Finance DataOps</div>
+        <div style="margin-top:6px">Mode: governed execution</div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <label class="search">
+          <span aria-hidden="true">⌕</span>
+          <input placeholder="Search automations, runs, connectors, policies..." />
+        </label>
+        <select class="select" aria-label="Environment">
+          <option>Production</option>
+          <option>Staging</option>
+          <option>Development</option>
+        </select>
+        <select class="select" aria-label="Time range">
+          <option>Last 24 hours</option>
+          <option>Last 7 days</option>
+          <option>Last 30 days</option>
+        </select>
+        <button class="icon-btn" title="Notifications">!</button>
+      </div>
+      <section class="content" id="view"></section>
+    </main>
+  </div>
+
+  <script>
+    const navItems = [
+      ["overview", "Overview", "M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z"],
+      ["operations", "Operations", "M4 5h16M4 12h16M4 19h16"],
+      ["automations", "Automations", "M4 7h4v4H4V7Zm12 0h4v4h-4V7ZM4 17h4v4H4v-4Zm4-8h4a4 4 0 0 1 4 4v0a4 4 0 0 0 4 4"],
+      ["runs", "Runs & Traces", "M4 5h16M4 12h16M4 19h16"],
+      ["approvals", "Approvals", "M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4Z"],
+      ["integrations", "Integrations", "M8 12h8M9 7H7a5 5 0 0 0 0 10h2m6-10h2a5 5 0 0 1 0 10h-2"],
+      ["catalog", "Catalog", "M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2V5Zm3 2h8M7 11h8"],
+      ["governance", "Governance", "M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4Zm-3 9 2 2 4-5"]
+    ];
+
+    const automations = [
+      { id: "auto_revenue_mismatch_triage", name: "Revenue mismatch triage", trigger: "Finance alert / schedule", apps: ["Airflow", "GitLab", "Teams"], status: "active", owner: "finance-data", risk: "L2", success: "96%", last: "12 min ago" },
+      { id: "auto_failed_dag_router", name: "Failed DAG router", trigger: "Airflow task failed", apps: ["Airflow", "Teams"], status: "active", owner: "platform-data", risk: "L3", success: "91%", last: "23 min ago" },
+      { id: "auto_sheet_recon_intake", name: "Sheet reconciliation intake", trigger: "Google Sheet updated", apps: ["Sheets", "Email", "GitLab"], status: "paused", owner: "finance-ops", risk: "L2", success: "88%", last: "2h ago" },
+      { id: "auto_schema_change_review", name: "Schema change review", trigger: "GitLab MR opened", apps: ["GitLab", "Catalog"], status: "active", owner: "data-platform", risk: "L2", success: "98%", last: "35 min ago" }
+    ];
+
+    const runs = [
+      { id: "run_24891", automation: "Revenue mismatch triage", status: "waiting approval", duration: "42s", trigger: "Finance alert", failed: "", cost: "$0.11", started: "12 min ago" },
+      { id: "run_24890", automation: "Failed DAG router", status: "success", duration: "18s", trigger: "Airflow failure", failed: "", cost: "$0.04", started: "23 min ago" },
+      { id: "run_24889", automation: "Sheet reconciliation intake", status: "failed", duration: "31s", trigger: "Sheet update", failed: "Google Sheets MCP", cost: "$0.07", started: "2h ago" },
+      { id: "run_24888", automation: "Schema change review", status: "success", duration: "54s", trigger: "GitLab MR", failed: "", cost: "$0.16", started: "3h ago" }
+    ];
+
+    const dags = [
+      { id: "revenue_daily_dag", status: "failed", owner: "finance-data", sla: "04:00", last: "today 04:01", runtime: "0/80m", success: "86%", alert: "net_revenue overstated 2.1%" },
+      { id: "load_stripe_payments", status: "failed", owner: "data-platform", sla: "03:00", last: "today 03:02", runtime: "0/120m", success: "71%", alert: "HTTP 429 after 3 retries" },
+      { id: "stg_payment_dag", status: "running", owner: "data-platform", sla: "03:30", last: "running", runtime: "45/90m", success: "95%", alert: "" },
+      { id: "daily_orders_pipeline", status: "failed", owner: "orders-data", sla: "02:30", last: "today 02:31", runtime: "0/60m", success: "80%", alert: "required column order_channel added" },
+      { id: "export_finance_report", status: "success", owner: "bi-team", sla: "05:00", last: "today 05:03", runtime: "18/20m", success: "98%", alert: "" }
+    ];
+
+    const alerts = [
+      {
+        id: "dq_2026_0607",
+        title: "net_revenue is overstated by 2.1%",
+        severity: "high",
+        status: "needs approval",
+        dag: "revenue_daily_dag",
+        source: "Reconciliation check",
+        why: "Source has a new refund_status value PARTIAL_REFUND, but revenue_daily.sql only subtracts refunded_amount when refund_status = REFUNDED.",
+        evidence: ["enum_drift: PARTIAL_REFUND", "code_search: mapping handles only REFUNDED", "impact_simulation: affected_amount 210,000,000"],
+        proposal: "Update revenue_daily.sql to subtract refunded_amount for REFUNDED and PARTIAL_REFUND, then add an accepted_values dbt test for refund_status.",
+        review: "Patch is narrow, but requires Finance approval because it changes a revenue metric.",
+        validation: "Reconciliation before fix: 2.10%. After fix: 0.00%. dbt test catches old bug and passes after patch."
+      },
+      {
+        id: "dq_2026_0608",
+        title: "amount null spike detected",
+        severity: "medium",
+        status: "escalated",
+        dag: "stg_payment_dag",
+        source: "Null rate monitor",
+        why: "amount null_rate jumped to 40% on partition 2026-06-08. This looks like an ingestion quality issue, not a safe code patch.",
+        evidence: ["null_check: 80/200 rows null", "freshness: partition loaded", "volume: normal"],
+        proposal: "Notify data-platform owner, block downstream revenue publishing for the affected partition, and request source replay.",
+        review: "No code patch proposed. Human owner should resolve upstream data quality.",
+        validation: "Rerun null_check after replay. Continue only when amount null_rate < 5%."
+      },
+      {
+        id: "dag_orders_schema",
+        title: "daily_orders_pipeline schema drift",
+        severity: "high",
+        status: "draft fix",
+        dag: "daily_orders_pipeline",
+        source: "Airflow failed task",
+        why: "Upstream raw.orders added required column order_channel. The staging model contract has not been updated.",
+        evidence: ["schema_diff: + order_channel required", "compile_stg_orders failed", "downstream: Orders dashboard"],
+        proposal: "Draft GitLab MR to add order_channel to stg_orders, update contract docs, and add a not_null test.",
+        review: "Requires data owner review because it changes the published staging schema.",
+        validation: "Compile staging model and run contract tests before merge."
+      }
+    ];
+
+    let selectedAlert = alerts[0];
+
+    const approvals = [
+      { id: "ap_1042", title: "Create GitLab MR for refund mapping", impact: "net_revenue, finance_revenue_report", risk: "L2", requester: "Revenue mismatch triage", age: "12 min" },
+      { id: "ap_1041", title: "Send Teams incident summary to Finance", impact: "Finance channel notification", risk: "L2", requester: "Sheet reconciliation intake", age: "48 min" },
+      { id: "ap_1040", title: "Write RCA memory after validated run", impact: "Long-term incident memory", risk: "L2", requester: "Revenue mismatch triage", age: "1h" }
+    ];
+
+    const integrations = [
+      { name: "Airflow", type: "MCP", status: "healthy", auth: "service account", scopes: "read, retry", calls: "1,283", errors: "0.4%" },
+      { name: "GitLab", type: "MCP", status: "healthy", auth: "project token", scopes: "read, draft MR", calls: "342", errors: "0.2%" },
+      { name: "Microsoft Teams", type: "MCP", status: "attention", auth: "OAuth", scopes: "send draft, notify", calls: "97", errors: "2.1%" },
+      { name: "Google Sheets", type: "MCP", status: "degraded", auth: "OAuth", scopes: "read ranges", calls: "211", errors: "8.7%" },
+      { name: "Email", type: "MCP", status: "healthy", auth: "OAuth", scopes: "read inbox", calls: "423", errors: "0.5%" }
+    ];
+
+    const trace = [
+      ["success", "Trigger received", "Finance alert matched automation auto_revenue_mismatch_triage", "240ms"],
+      ["success", "Planner generated execution plan", "Selected retrieval, SQL profile, code search, impact simulation", "1.8s"],
+      ["success", "Tool execution", "sql_profile, lineage_lookup, GitLab code search completed", "12.4s"],
+      ["success", "Evidence verification", "4 claims verified, 1 business rule requires approval", "4.9s"],
+      ["warn", "Action gated by policy", "Create MR requires L2 human approval", "90ms"]
+    ];
+
+    const policies = [
+      ["L1 read-only", "Allowed", "Catalog lookup, lineage, SQL profile"],
+      ["L2 assisted", "Approval required", "Draft MR, write memory, send external update"],
+      ["L3 reversible", "Auto with audit", "Retry transient job, refresh metadata"],
+      ["Production deploy", "Blocked", "No direct deploy from agent in MVP"]
+    ];
+
+    let current = "overview";
+    let selectedRun = runs[0];
+
+    function icon(path) {
+      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>`;
+    }
+    function badge(text, tone) {
+      const map = { active: "green", success: "green", healthy: "green", degraded: "red", failed: "red", paused: "amber", attention: "amber", pending: "amber", "waiting approval": "amber", L1: "slate", L2: "blue", L3: "green" };
+      const t = tone || map[text] || "slate";
+      return `<span class="badge b-${t}"><span class="dot"></span>${text}</span>`;
+    }
+    function row(title, sub, right, onclick = "") {
+      return `<div class="row" ${onclick}><div><div class="row-title">${title}</div><div class="row-sub">${sub}</div></div><div class="badges">${right}</div></div>`;
+    }
+    function page(title, sub, action, body) {
+      return `<div class="page-head"><div><h2>${title}</h2><p>${sub}</p></div>${action || ""}</div>${body}`;
+    }
+    function panel(title, sub, body, right = "") {
+      return `<section class="panel"><div class="panel-h"><div><h3>${title}</h3>${sub ? `<span>${sub}</span>` : ""}</div>${right}</div><div class="panel-b">${body}</div></section>`;
+    }
+    function metric(label, value, detail) {
+      return `<div class="panel metric"><small>${label}</small><strong>${value}</strong><em>${detail}</em></div>`;
+    }
+
+    function renderNav() {
+      document.getElementById("nav").innerHTML = navItems.map(([key, label, svg]) =>
+        `<button class="${current === key ? "active" : ""}" onclick="go('${key}')">${icon(svg)}${label}</button>`
+      ).join("");
+    }
+
+    function overview() {
+      const attention = [
+        row("Review revenue fix proposal", "net_revenue mismatch has verified evidence and a gated patch", badge("L2") + badge("12 min", "amber"), `onclick="go('operations')"`),
+        row("Investigate failed DAG", "daily_orders_pipeline failed from schema drift", badge("high", "red"), `onclick="go('operations')"`),
+        row("Google Sheets connector degraded", "8.7% error rate over last 24 hours", badge("degraded")),
+        row("Paused automation needs owner review", "Sheet reconciliation intake is paused after repeated auth failures", badge("paused"))
+      ].join("");
+      const autoHealth = automations.map(a => row(a.name, `${a.trigger} · owner ${a.owner}`, badge(a.status) + badge(a.risk))).join("");
+      return page(
+        "Operations Overview",
+        "A control surface for agentic data automations: monitor health, inspect traces, approve gated actions, and keep integrations governed.",
+        `<button class="primary" onclick="go('automations')">Create automation</button>`,
+        `<div class="grid cols-4">
+          ${metric("Active automations", "3", "1 paused")}
+          ${metric("Runs today", "184", "96.1% success")}
+          ${metric("Pending approvals", "3", "all L2 assisted")}
+          ${metric("Connector health", "4/5", "1 degraded")}
+        </div>
+        <div class="grid cols-main" style="margin-top:16px">
+          ${panel("Attention queue", "Work that needs human action", `<div class="list">${attention}</div>`)}
+          ${panel("Automation health", "Top workflows by recent activity", `<div class="list">${autoHealth}</div>`)}
+        </div>`
+      );
+    }
+
+    function operationsView() {
+      const dagTable = `<table><thead><tr><th>DAG</th><th>Status</th><th>SLA</th><th>Runtime</th><th>Owner</th><th>Alert</th></tr></thead><tbody>
+        ${dags.map(d => `<tr><td><strong>${d.id}</strong><div class="row-sub">${d.last} · success ${d.success}</div></td><td>${badge(d.status)}</td><td>${d.sla}</td><td>${d.runtime}</td><td>${d.owner}</td><td>${d.alert || "—"}</td></tr>`).join("")}
+      </tbody></table>`;
+      const alertList = alerts.map((a, i) => row(
+        a.title,
+        `${a.source} · ${a.dag}`,
+        badge(a.severity, a.severity === "high" ? "red" : "amber") + badge(a.status, a.status === "needs approval" ? "amber" : "blue"),
+        `onclick="selectAlert(${i})" style="cursor:pointer"`
+      )).join("");
+      return page(
+        "Operations",
+        "The day-to-day Data Engineering cockpit: watch DAGs, inspect alerts, understand why something is wrong, and review the agent proposal before action.",
+        `<button class="secondary">Open Airflow</button>`,
+        `<div class="grid cols-main">
+          <div class="grid">
+            ${panel("DAG monitor", "Airflow / Dagster / Prefect status with owner and SLA context", dagTable)}
+            ${panel("Alert queue", "Prioritized anomalies and failed jobs", `<div class="list">${alertList}</div>`)}
+          </div>
+          ${alertDetail()}
+        </div>`
+      );
+    }
+
+    function alertDetail() {
+      const a = selectedAlert || alerts[0];
+      const evidence = a.evidence.map(e => `<li>${e}</li>`).join("");
+      return `<aside class="drawer">
+        <div class="panel-h"><div><h3>${a.title}</h3><span>${a.dag} · ${a.source}</span></div>${badge(a.status, a.status === "needs approval" ? "amber" : "blue")}</div>
+        <div class="panel-b">
+          <div class="tabs" style="margin-bottom:12px">
+            <button class="active">Why</button><button>Evidence</button><button>Proposal</button><button>Review</button>
+          </div>
+          <div class="kv">
+            <div><span>Severity</span><b>${a.severity}</b></div>
+            <div><span>Decision</span><b>${a.status}</b></div>
+          </div>
+          <div style="margin-top:16px">
+            <h3 style="font-size:13px;margin:0 0 6px">Why it is wrong</h3>
+            <p class="row-sub" style="font-size:13px;line-height:1.5;margin:0">${a.why}</p>
+          </div>
+          <div style="margin-top:16px">
+            <h3 style="font-size:13px;margin:0 0 6px">Evidence</h3>
+            <ul class="row-sub" style="font-size:13px;line-height:1.6;margin:0;padding-left:18px">${evidence}</ul>
+          </div>
+          <div style="margin-top:16px">
+            <h3 style="font-size:13px;margin:0 0 6px">Agent proposal</h3>
+            <p class="row-sub" style="font-size:13px;line-height:1.5;margin:0">${a.proposal}</p>
+          </div>
+          <div style="margin-top:16px">
+            <h3 style="font-size:13px;margin:0 0 6px">Review and validation</h3>
+            <p class="row-sub" style="font-size:13px;line-height:1.5;margin:0">${a.review}</p>
+            <p class="row-sub" style="font-size:13px;line-height:1.5;margin:8px 0 0">${a.validation}</p>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:18px">
+            <button class="primary">Review action</button>
+            <button class="secondary">Open trace</button>
+          </div>
+        </div>
+      </aside>`;
+    }
+
+    function automationsView() {
+      const table = `<table><thead><tr><th>Automation</th><th>Trigger</th><th>Integrations</th><th>Owner</th><th>Risk</th><th>Status</th><th>Success</th></tr></thead><tbody>
+        ${automations.map(a => `<tr><td><strong>${a.name}</strong><div class="mono">${a.id}</div></td><td>${a.trigger}</td><td>${a.apps.join(", ")}</td><td>${a.owner}</td><td>${badge(a.risk)}</td><td>${badge(a.status)}</td><td>${a.success}</td></tr>`).join("")}
+      </tbody></table>`;
+      const canvas = `<div class="canvas">
+        <div class="node"><b>Trigger</b><span>Airflow task failed</span></div><div class="arrow">→</div>
+        <div class="node"><b>Plan</b><span>Classify failure and select tools</span></div><div class="arrow">→</div>
+        <div class="node"><b>Execute</b><span>Read logs, inspect lineage, search code</span></div><div class="arrow">→</div>
+        <div class="node"><b>Verify</b><span>Check evidence and policy tier</span></div><div class="arrow">→</div>
+        <div class="node"><b>Act</b><span>Retry, draft MR, or request approval</span></div>
+      </div>`;
+      return page("Automations", "Define and operate governed data workflows. Each automation has a trigger, tool plan, integration scope, risk tier, and owner.",
+        `<button class="primary">New automation</button>`,
+        `<div class="grid">${panel("Automation inventory", "Production workflows", table)}${panel("Workflow blueprint", "Read-only canvas for the selected automation", canvas)}</div>`);
+    }
+
+    function runsView() {
+      const table = `<table><thead><tr><th>Run</th><th>Automation</th><th>Status</th><th>Trigger</th><th>Duration</th><th>Failed step</th><th>Cost</th></tr></thead><tbody>
+        ${runs.map((r, i) => `<tr onclick="selectRun(${i})" style="cursor:pointer"><td class="mono">${r.id}</td><td>${r.automation}<div class="row-sub">${r.started}</div></td><td>${badge(r.status)}</td><td>${r.trigger}</td><td>${r.duration}</td><td>${r.failed || "—"}</td><td>${r.cost}</td></tr>`).join("")}
+      </tbody></table>`;
+      return page("Runs & Traces", "Debug every agent execution from trigger to tool calls, verification, policy gates, and final action.",
+        `<button class="secondary">Export traces</button>`,
+        `<div class="split">${panel("Run history", "Click a run to inspect its trace", table)}${drawer()}</div>`);
+    }
+
+    function drawer() {
+      if (!selectedRun) return `<aside class="drawer"><div class="empty">Select a run to inspect trace, evidence, errors, and policy decisions.</div></aside>`;
+      const steps = trace.map((s, i) => `<div class="trace-step ${s[0]}"><div class="trace-index">${i + 1}</div><div class="trace-main"><strong>${s[1]}</strong><span>${s[2]}</span></div><span class="mono">${s[3]}</span></div>`).join("");
+      return `<aside class="drawer">
+        <div class="panel-h"><div><h3>${selectedRun.id}</h3><span>${selectedRun.automation}</span></div>${badge(selectedRun.status)}</div>
+        <div class="panel-b">
+          <div class="kv">
+            <div><span>Trigger</span><b>${selectedRun.trigger}</b></div>
+            <div><span>Duration</span><b>${selectedRun.duration}</b></div>
+            <div><span>Cost</span><b>${selectedRun.cost}</b></div>
+            <div><span>Policy outcome</span><b>Approval required</b></div>
+          </div>
+          <div class="trace" style="margin-top:14px">${steps}</div>
+        </div>
+      </aside>`;
+    }
+
+    function approvalsView() {
+      const items = approvals.map(a => row(a.title, `${a.requester} · impact: ${a.impact}`, badge(a.risk) + badge(a.age, "amber") + `<button class="primary">Review</button>`)).join("");
+      return page("Approvals", "A focused inbox for gated agent actions. Review evidence, impact, rollback path, and audit context before allowing side effects.",
+        `<button class="secondary">Approval policy</button>`,
+        `<div class="grid cols-main">
+          ${panel("Pending approval inbox", "Actions blocked by governance", `<div class="list">${items}</div>`)}
+          ${panel("Review checklist", "Required before approving", `<div class="kv">
+            <div><span>Evidence verified</span><b>Required</b></div>
+            <div><span>Impact simulated</span><b>Required</b></div>
+            <div><span>Rollback path</span><b>Required</b></div>
+            <div><span>Owner notified</span><b>Required for L2+</b></div>
+          </div>`)}
+        </div>`);
+    }
+
+    function integrationsView() {
+      const table = `<table><thead><tr><th>Connector</th><th>Type</th><th>Status</th><th>Auth</th><th>Scopes</th><th>Calls</th><th>Error rate</th></tr></thead><tbody>
+        ${integrations.map(i => `<tr><td><strong>${i.name}</strong></td><td>${i.type}</td><td>${badge(i.status)}</td><td>${i.auth}</td><td>${i.scopes}</td><td>${i.calls}</td><td>${i.errors}</td></tr>`).join("")}
+      </tbody></table>`;
+      return page("Integrations", "Manage MCP-backed systems and connector health. Tools exposed to agents remain allow-listed and governed.",
+        `<button class="primary">Add connector</button>`,
+        `<div class="grid">${panel("Connector health", "MCP servers and external systems", table)}${panel("MCP boundary", "Recommended routing", `<div class="canvas">
+          <div class="node"><b>Planner</b><span>Requests capability</span></div><div class="arrow">→</div>
+          <div class="node"><b>Tool Registry</b><span>Maps canonical tool</span></div><div class="arrow">→</div>
+          <div class="node"><b>Policy Gate</b><span>Checks tier and approval</span></div><div class="arrow">→</div>
+          <div class="node"><b>MCP Gateway</b><span>Calls allow-listed tool</span></div><div class="arrow">→</div>
+          <div class="node"><b>External System</b><span>Airflow, GitLab, Teams</span></div>
+        </div>`)}</div>`);
+    }
+
+    function catalogView() {
+      return page("Data Catalog", "A compact workspace for tables, metrics, owners, contracts, and lineage used by automations and investigations.",
+        `<button class="secondary">Sync metadata</button>`,
+        `<div class="grid cols-3">
+          ${panel("Critical metrics", "Business definitions", `<div class="list">${row("net_revenue", "Owner Finance · source payment_txn, order_fact", badge("healthy"))}${row("gross_revenue", "Owner Finance · source payment_txn", badge("healthy"))}${row("margin", "Owner Finance · stale contract", badge("attention"))}</div>`)}
+          ${panel("Data assets", "Tables and reports", `<div class="list">${row("payment_txn", "1.27M rows · source layer", badge("healthy"))}${row("revenue_daily", "mart · stale yesterday", badge("attention"))}${row("finance_revenue_report", "dashboard · downstream Finance", badge("attention"))}</div>`)}
+          ${panel("Lineage summary", "Blast radius preview", `<div class="canvas" style="grid-template-columns:1fr"><div class="node"><b>payment_txn</b><span>→ stg_payment → revenue_daily → net_revenue → finance_revenue_report</span></div></div>`)}
+        </div>`);
+    }
+
+    function governanceView() {
+      const table = `<table><thead><tr><th>Tier</th><th>Default decision</th><th>Examples</th></tr></thead><tbody>
+        ${policies.map(p => `<tr><td><strong>${p[0]}</strong></td><td>${p[1]}</td><td>${p[2]}</td></tr>`).join("")}
+      </tbody></table>`;
+      return page("Governance", "Define what agents may read, draft, retry, notify, or block. Every tool call and approval remains auditable.",
+        `<button class="primary">Create policy</button>`,
+        `<div class="grid cols-main">
+          ${panel("Permission tiers", "Execution policy", table)}
+          ${panel("Audit posture", "Current controls", `<div class="kv">
+            <div><span>Raw rows to LLM</span><b>Blocked</b></div>
+            <div><span>Production deploy</span><b>Blocked in MVP</b></div>
+            <div><span>External write</span><b>Approval required</b></div>
+            <div><span>MCP tool access</span><b>Allow-list only</b></div>
+          </div>`)}
+        </div>`);
+    }
+
+    function render() {
+      renderNav();
+      const views = { overview, operations: operationsView, automations: automationsView, runs: runsView, approvals: approvalsView, integrations: integrationsView, catalog: catalogView, governance: governanceView };
+      document.getElementById("view").innerHTML = views[current]();
+    }
+    function go(key) { current = key; render(); }
+    function selectRun(index) { selectedRun = runs[index]; render(); }
+    function selectAlert(index) { selectedAlert = alerts[index]; render(); }
+    window.go = go;
+    window.selectRun = selectRun;
+    window.selectAlert = selectAlert;
+    render();
+  </script>
+</body>
+</html>

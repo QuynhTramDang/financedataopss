@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">Impact-Aware Finance DataOps Twin Architecture</title>
+  <desc id="desc">A clean left-to-right architecture flow for the governed Finance DataOps investigation workflow.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#243042"/>
+    </marker>
+    <marker id="arrowSoft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#64748b"/>
+    </marker>
+    <style>
+      .page { fill: #fbfaf7; }
+      .title { font: 700 36px Arial, sans-serif; fill: #172033; }
+      .subtitle { font: 400 16px Arial, sans-serif; fill: #526173; }
+      .lane-title { font: 700 15px Arial, sans-serif; fill: #475569; letter-spacing: .5px; }
+      .label { font: 700 17px Arial, sans-serif; fill: #172033; }
+      .small { font: 400 13px Arial, sans-serif; fill: #475569; }
+      .tiny { font: 400 11px Arial, sans-serif; fill: #64748b; }
+      .box { stroke: #1f2937; stroke-width: 1.8; rx: 12; }
+      .main { fill: #ffffff; }
+      .llm { fill: #fff7ed; }
+      .policy { fill: #ecfdf5; }
+      .evidence { fill: #eef2ff; }
+      .approval { fill: #fef2f2; }
+      .memory { fill: #fef9c3; }
+      .action { fill: #f5f3ff; }
+      .line { stroke: #243042; stroke-width: 2.2; fill: none; marker-end: url(#arrow); stroke-linecap: round; stroke-linejoin: round; }
+      .soft { stroke: #64748b; stroke-width: 1.8; fill: none; marker-end: url(#arrowSoft); stroke-linecap: round; stroke-linejoin: round; }
+      .dash { stroke: #64748b; stroke-width: 1.8; fill: none; marker-end: url(#arrowSoft); stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 7 7; }
+      .lane { fill: #ffffff; stroke: #e2e8f0; stroke-width: 1; rx: 18; }
+      .note { fill: #0f172a; rx: 10; }
+      .noteText { font: 700 13px Arial, sans-serif; fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect class="page" width="1280" height="760"/>
+  <text x="64" y="58" class="title">Impact-Aware Finance DataOps Twin</text>
+  <text x="66" y="86" class="subtitle">A governed investigation workflow: AI proposes, tools verify, policy gates, humans approve.</text>
+
+  <!-- lane backgrounds -->
+  <rect x="44" y="122" width="1192" height="106" class="lane"/>
+  <rect x="44" y="258" width="1192" height="164" class="lane"/>
+  <rect x="44" y="452" width="1192" height="122" class="lane"/>
+  <rect x="44" y="606" width="1192" height="86" class="lane"/>
+
+  <text x="64" y="150" class="lane-title">1. INTAKE AND STATE</text>
+  <text x="64" y="286" class="lane-title">2. CONTEXT, REASONING, AND GOVERNED TOOL EXECUTION</text>
+  <text x="64" y="480" class="lane-title">3. VERIFICATION, VALIDATION, AND APPROVAL</text>
+  <text x="64" y="634" class="lane-title">4. REMEDIATION AND LEARNING</text>
+
+  <!-- row 1 -->
+  <rect x="72" y="164" width="168" height="44" class="box main"/>
+  <text x="94" y="191" class="label">Finance / Alert</text>
+
+  <rect x="286" y="154" width="188" height="64" class="box main"/>
+  <text x="316" y="181" class="label">LangGraph State</text>
+  <text x="318" y="202" class="small">investigation timeline</text>
+
+  <rect x="520" y="154" width="190" height="64" class="box llm"/>
+  <text x="548" y="181" class="label">Intent + Risk</text>
+  <text x="548" y="202" class="small">metric, date, risk tier</text>
+
+  <rect x="756" y="154" width="198" height="64" class="box memory"/>
+  <text x="784" y="181" class="label">Memory + RAG</text>
+  <text x="784" y="202" class="small">contracts, runbooks, incidents</text>
+
+  <rect x="1000" y="154" width="188" height="64" class="box main"/>
+  <text x="1028" y="181" class="label">Issue Routing</text>
+  <text x="1028" y="202" class="small">known vs unknown</text>
+
+  <path d="M240 186 H286" class="line"/>
+  <path d="M474 186 H520" class="line"/>
+  <path d="M710 186 H756" class="line"/>
+  <path d="M954 186 H1000" class="line"/>
+
+  <!-- row 2 main -->
+  <rect x="90" y="316" width="180" height="70" class="box llm"/>
+  <text x="120" y="344" class="label">Planner</text>
+  <text x="120" y="365" class="small">suggest diagnostic steps</text>
+
+  <rect x="322" y="316" width="188" height="70" class="box policy"/>
+  <text x="350" y="344" class="label">Tool Governance</text>
+  <text x="350" y="365" class="small">allow/block, risk tiers</text>
+
+  <rect x="562" y="306" width="204" height="90" class="box policy"/>
+  <text x="592" y="334" class="label">Diagnostic Tools</text>
+  <text x="592" y="356" class="small">SQL profile, freshness</text>
+  <text x="592" y="375" class="small">null, duplicate, drift</text>
+
+  <rect x="818" y="306" width="176" height="90" class="box policy"/>
+  <text x="846" y="334" class="label">Code + Lineage</text>
+  <text x="846" y="356" class="small">code search</text>
+  <text x="846" y="375" class="small">blast radius</text>
+
+  <rect x="1044" y="306" width="154" height="90" class="box evidence"/>
+  <text x="1068" y="334" class="label">Evidence Pack</text>
+  <text x="1068" y="356" class="small">normalized tool</text>
+  <text x="1068" y="375" class="small">outputs</text>
+
+  <path d="M1094 218 C1094 250 180 246 180 316" class="line"/>
+  <path d="M270 351 H322" class="line"/>
+  <path d="M510 351 H562" class="line"/>
+  <path d="M766 351 H818" class="line"/>
+  <path d="M994 351 H1044" class="line"/>
+
+  <!-- side callouts in row 2 -->
+  <rect x="562" y="267" width="204" height="24" class="note"/>
+  <text x="588" y="284" class="noteText">0 raw rows sent to LLM</text>
+
+  <rect x="1010" y="268" width="198" height="24" class="note"/>
+  <text x="1034" y="285" class="noteText">structured evidence only</text>
+
+  <!-- row 3 -->
+  <rect x="74" y="498" width="176" height="56" class="box llm"/>
+  <text x="102" y="523" class="label">Root Cause</text>
+  <text x="102" y="543" class="small">narrative from evidence</text>
+
+  <rect x="296" y="498" width="174" height="56" class="box policy"/>
+  <text x="324" y="523" class="label">Claim Verifier</text>
+  <text x="324" y="543" class="small">rule-based status</text>
+
+  <rect x="516" y="498" width="176" height="56" class="box policy"/>
+  <text x="544" y="523" class="label">Impact + Patch</text>
+  <text x="544" y="543" class="small">small, scoped proposal</text>
+
+  <rect x="738" y="498" width="176" height="56" class="box policy"/>
+  <text x="766" y="523" class="label">Validation</text>
+  <text x="766" y="543" class="small">reconciliation tests</text>
+
+  <rect x="960" y="498" width="176" height="56" class="box approval"/>
+  <text x="988" y="523" class="label">Human Approval</text>
+  <text x="988" y="543" class="small">Finance/Data owner</text>
+
+  <path d="M1121 396 C1121 452 162 444 162 498" class="line"/>
+  <path d="M250 526 H296" class="line"/>
+  <path d="M470 526 H516" class="line"/>
+  <path d="M692 526 H738" class="line"/>
+  <path d="M914 526 H960" class="line"/>
+
+  <!-- unknown branch -->
+  <rect x="82" y="432" width="268" height="34" class="box memory"/>
+  <text x="104" y="454" class="small">Unknown issue: propose candidate definition, then escalate</text>
+  <path d="M170 498 C166 480 171 472 202 466" class="dash"/>
+
+  <!-- row 4 -->
+  <rect x="184" y="646" width="190" height="34" class="box action"/>
+  <text x="214" y="668" class="label">Apply Remediation</text>
+
+  <rect x="510" y="646" width="192" height="34" class="box memory"/>
+  <text x="540" y="668" class="label">RCA + Audit Trail</text>
+
+  <rect x="838" y="646" width="224" height="34" class="box memory"/>
+  <text x="868" y="668" class="label">Memory Write-back</text>
+
+  <path d="M1048 554 C1048 614 282 602 282 646" class="line"/>
+  <path d="M374 663 H510" class="line"/>
+  <path d="M702 663 H838" class="line"/>
+
+  <!-- feedback loops -->
+  <path d="M950 646 C960 610 955 590 914 554" class="dash"/>
+  <text x="963" y="619" class="tiny">learned runbook informs next investigation</text>
+
+  <path d="M826 498 C806 462 748 430 664 396" class="dash"/>
+  <text x="710" y="448" class="tiny">validation fail -> refine patch</text>
+
+  <!-- footer principle -->
+  <rect x="64" y="714" width="1152" height="30" class="note"/>
+  <text x="142" y="734" class="noteText">AI proposes and explains   |   Tools measure and verify   |   Policies decide what is allowed   |   Humans approve business-impacting change</text>
+</svg>

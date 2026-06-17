@@ -1,0 +1,486 @@
+<!doctype html>
+<!--
+  Finance DataOps Twin — Enterprise UI prototype (React + Tailwind + Lucide-style icons)
+  Self-contained: mở trực tiếp bằng trình duyệt (không cần npm/server).
+  Dữ liệu là SAMPLE phản ánh đúng output engine Python; wire backend qua REST ở bản production.
+-->
+<html lang="vi" class="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Finance DataOps Twin — Control Plane</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] } } }
+    };
+  </script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    @keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .pulse-dot { animation: pulseDot 1.8s ease-in-out infinite; }
+    .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+    .scroll-thin::-webkit-scrollbar-thumb { background: rgba(100,116,139,.35); border-radius: 8px; }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950">
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect } = React;
+
+    /* ───────────────────────── Icons (Lucide-style inline SVG) ───────────────────────── */
+    function Icon({ name, className = "w-4 h-4", strokeWidth = 2 }) {
+      const p = { fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round" };
+      const svg = (children) => (
+        <svg viewBox="0 0 24 24" className={className} {...p}>{children}</svg>
+      );
+      switch (name) {
+        case "dashboard": return svg(<><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></>);
+        case "siren": return svg(<><path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21h14"/><path d="M21 12h1M3 12H2M12 2v1M19 5l-.7.7M5.7 5.7 5 5"/></>);
+        case "shield": return svg(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>);
+        case "branch": return svg(<><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></>);
+        case "settings": return svg(<><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></>);
+        case "filter": return svg(<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>);
+        case "cpu": return svg(<><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></>);
+        case "database": return svg(<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></>);
+        case "code": return svg(<><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></>);
+        case "file": return svg(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></>);
+        case "play": return svg(<polygon points="6 4 20 12 6 20 6 4"/>);
+        case "search": return svg(<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>);
+        case "zap": return svg(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>);
+        case "activity": return svg(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>);
+        case "alert": return svg(<><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/></>);
+        case "check": return svg(<><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>);
+        case "x": return svg(<><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></>);
+        case "chevron": return svg(<path d="m9 18 6-6-6-6"/>);
+        case "rocket": return svg(<><path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2 0-2.7a1.9 1.9 0 0 0-3 0Z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.9 12.9 0 0 1 22 2c0 2.7-.8 7.7-6 11a22 22 0 0 1-4 2Z"/><path d="M9 12H4s.5-3.3 2-4.5C7.3 6.4 9 6 9 6"/></>);
+        case "sun": return svg(<><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></>);
+        case "moon": return svg(<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>);
+        case "git": return svg(<><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></>);
+        case "spark": return svg(<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>);
+        case "layers": return svg(<><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></>);
+        default: return svg(<circle cx="12" cy="12" r="3"/>);
+      }
+    }
+
+    /* ───────────────────────── Sample data (mirror engine output) ───────────────────────── */
+    const MODELS = [
+      { key: "classifier", icon: "filter", state: "real", desc: "Intent & Risk" },
+      { key: "planner", icon: "cpu", state: "real", desc: "Orchestration" },
+      { key: "sql_generator", icon: "database", state: "stub", desc: "SQL profiling" },
+      { key: "code_model", icon: "code", state: "stub", desc: "Code search" },
+      { key: "claim_verifier", icon: "shield", state: "real", desc: "Verification" },
+      { key: "patch_reviewer", icon: "git", state: "real", desc: "Patch review" },
+      { key: "rca_generator", icon: "file", state: "real", desc: "RCA report" },
+      { key: "guardrail", icon: "shield", state: "stub", desc: "PII / mask" },
+    ];
+
+    const PIPELINE = ["State", "Model", "Tools", "Routing", "Verification", "Validation"];
+
+    const NAV = [
+      { key: "dashboard", label: "Dashboard", icon: "dashboard" },
+      { key: "incident", label: "Incident Triage", icon: "siren" },
+      { key: "dq", label: "Data Quality", icon: "activity" },
+      { key: "lineage", label: "Lineage Explorer", icon: "branch" },
+      { key: "settings", label: "Settings", icon: "settings" },
+    ];
+
+    const INVESTIGATION = {
+      anomaly: "enum_drift", risk: "high", route: "confident",
+      rootCause: "Source xuất hiện refund_status mới PARTIAL_REFUND nhưng revenue_daily.sql chỉ handle REFUNDED → net_revenue overstated.",
+      claims: [
+        { t: "PARTIAL_REFUND xuất hiện trong payment_txn", s: "verified" },
+        { t: "revenue_daily.sql chưa handle PARTIAL_REFUND", s: "verified" },
+        { t: "net_revenue overstated (affected_amount > 0)", s: "verified" },
+        { t: "PARTIAL_REFUND nên tính vào refunded_amount", s: "requires_approval" },
+      ],
+      before: 2.10, after: 0.00, affected: "210,000,000",
+      tests: 5, testsTotal: 5,
+      oldCode: "WHEN refund_status = 'REFUNDED' THEN refunded_amount",
+      newCode: "WHEN refund_status IN ('REFUNDED','PARTIAL_REFUND') THEN refunded_amount",
+      trust: [
+        ["Metric definition", "High"], ["Data anomaly", "High"], ["Code root cause", "High"],
+        ["Business interpretation", "Medium"], ["Patch correctness", "High"], ["Deployment safety", "Medium"],
+      ],
+    };
+
+    const ALERTS = [
+      { date: "2026-06-07", type: "enum_drift", sev: "high", ev: "PARTIAL_REFUND mới; code thiếu mapping", amount: "210,000,000", action: "open_investigation_and_propose_patch", tier: "L2" },
+      { date: "2026-06-08", type: "null_spike", sev: "medium", ev: "amount null_rate 40% (80 rows)", amount: "0", action: "notify_owner", tier: "L3" },
+      { date: "2026-06-09", type: "missing_partition", sev: "high", ev: "partition 0 row", amount: "0", action: "notify_owner_and_trigger_rerun", tier: "L3" },
+    ];
+
+    const JOBS = [
+      { id: "daily_orders_pipeline", type: "schema_drift", sev: "high", action: "propose_patch", tier: "L2", auto: null },
+      { id: "load_stripe_payments", type: "transient", sev: "medium", action: "retry_job", tier: "L3", auto: "retry_job" },
+      { id: "revenue_daily", type: "data_quality", sev: "medium", action: "notify_owner", tier: "L3", auto: "notify_owner" },
+      { id: "export_finance_report", type: "permission", sev: "high", action: "escalate", tier: "L1", auto: null },
+    ];
+
+    const LINEAGE_ANSWERS = {
+      net_revenue: "net_revenue = paid_amount − refunded_amount. Source: payment_txn, order_fact. Owner: Finance.",
+      stg_payment: "Sửa stg_payment ảnh hưởng: pipelines = [revenue_daily], metrics = [net_revenue], reports = [finance_revenue_report].",
+    };
+
+    /* ───────────────────────── Primitives ───────────────────────── */
+    const Btn = ({ children, variant = "primary", className = "", ...rest }) => {
+      const base = "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-60 disabled:cursor-not-allowed";
+      const v = {
+        primary: "bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm shadow-indigo-600/20 px-4 py-2.5",
+        ghost: "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 px-4 py-2.5",
+        soft: "bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 px-3 py-2",
+      }[variant];
+      return <button className={`${base} ${v} ${className}`} {...rest}>{children}</button>;
+    };
+
+    const STATUS = {
+      verified: "text-emerald-700 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400 ring-emerald-600/20",
+      requires_approval: "text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 ring-amber-600/20",
+      unsupported: "text-rose-700 bg-rose-50 dark:bg-rose-500/10 dark:text-rose-400 ring-rose-600/20",
+      high: "text-rose-700 bg-rose-50 dark:bg-rose-500/10 dark:text-rose-400 ring-rose-600/20",
+      medium: "text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 ring-amber-600/20",
+      High: "text-emerald-700 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400 ring-emerald-600/20",
+      Medium: "text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 ring-amber-600/20",
+    };
+    const Badge = ({ children, tone = "verified" }) => (
+      <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${STATUS[tone] || STATUS.verified}`}>{children}</span>
+    );
+
+    const Card = ({ icon, title, subtitle, right, children, className = "" }) => (
+      <section className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>
+        <header className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            {icon && <span className="grid place-items-center w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"><Icon name={icon} className="w-5 h-5"/></span>}
+            <div>
+              <h3 className="text-[15px] font-bold text-slate-800 dark:text-slate-100">{title}</h3>
+              {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+            </div>
+          </div>
+          {right}
+        </header>
+        <div className="p-6">{children}</div>
+      </section>
+    );
+
+    const Dot = ({ on }) => (
+      <span className={`inline-block w-2 h-2 rounded-full ${on ? "bg-emerald-500 pulse-dot" : "bg-slate-300 dark:bg-slate-600"}`} />
+    );
+
+    /* ───────────────────────── Sidebar ───────────────────────── */
+    function Sidebar({ active, setActive, dark, setDark }) {
+      return (
+        <aside className="w-72 shrink-0 h-screen sticky top-0 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+          <div className="px-5 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+            <span className="grid place-items-center w-10 h-10 rounded-xl bg-indigo-600 text-white shadow-sm"><Icon name="layers" className="w-5 h-5"/></span>
+            <div className="leading-tight">
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-slate-800 dark:text-white text-[15px]">DataOps Twin</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300">Enterprise</span>
+              </div>
+              <span className="text-[11px] text-slate-400">AI Orchestration Control Plane</span>
+            </div>
+          </div>
+
+          <nav className="px-3 py-4 space-y-1">
+            {NAV.map(n => (
+              <button key={n.key} onClick={() => setActive(n.key)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active === n.key ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}>
+                <Icon name={n.icon} className="w-[18px] h-[18px]"/>{n.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="mx-3 mt-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex-1 overflow-hidden flex flex-col">
+            <div className="px-4 py-3 flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Model Router</span>
+              <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400"><Dot on/> 4 live</span>
+            </div>
+            <div className="px-2 pb-2 space-y-0.5 overflow-y-auto scroll-thin">
+              {MODELS.map(m => (
+                <div key={m.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-white dark:hover:bg-slate-800">
+                  <Icon name={m.icon} className="w-4 h-4 text-slate-400 dark:text-slate-500"/>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12.5px] font-semibold text-slate-700 dark:text-slate-200 truncate">{m.key}</div>
+                    <div className="text-[10.5px] text-slate-400 truncate">{m.desc}</div>
+                  </div>
+                  <span className="flex items-center gap-1.5">
+                    <Dot on={m.state === "real"} />
+                    <span className={`text-[10px] font-semibold ${m.state === "real" ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>{m.state}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="p-3 border-t border-slate-200 dark:border-slate-800">
+              <Btn className="w-full"><Icon name="rocket" className="w-4 h-4"/>Deploy Configuration</Btn>
+            </div>
+          </div>
+
+          <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <span className="text-[11px] text-slate-400">tramdnq@vng.com.vn</span>
+            <button onClick={() => setDark(d => !d)} className="grid place-items-center w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-indigo-600 hover:border-indigo-300">
+              <Icon name={dark ? "sun" : "moon"} className="w-4 h-4"/>
+            </button>
+          </div>
+        </aside>
+      );
+    }
+
+    /* ───────────────────────── Header / pipeline stepper ───────────────────────── */
+    function PageHeader() {
+      return (
+        <div className="mb-6">
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Impact-Aware Finance DataOps Twin</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">LangGraph Control Plane — điều phối an toàn, có kiểm chứng, có human approval.</p>
+          <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[12px] font-semibold">
+            {PIPELINE.map((s, i) => (
+              <React.Fragment key={s}>
+                <span className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">{s}</span>
+                {i < PIPELINE.length - 1 && <Icon name="chevron" className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600"/>}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    /* ───────────────────────── Investigation card ───────────────────────── */
+    function InvestigationCard() {
+      const [text, setText] = useState("Revenue report ngày 2026-06-07 đang lệch 2.1% so với payment dashboard. Kiểm tra nguyên nhân và đề xuất fix.");
+      const [loading, setLoading] = useState(false);
+      const [res, setRes] = useState(null);
+      const [approved, setApproved] = useState(false);
+      const run = () => { setLoading(true); setRes(null); setApproved(false); setTimeout(() => { setRes(INVESTIGATION); setLoading(false); }, 1100); };
+      const Stat = ({ label, value, tone }) => (
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3">
+          <div className="text-[11px] text-slate-400 font-medium">{label}</div>
+          <div className={`text-lg font-bold ${tone || "text-slate-800 dark:text-slate-100"}`}>{value}</div>
+        </div>
+      );
+      return (
+        <Card icon="spark" title="Root Cause Investigation Agent" subtitle="Điều tra lỗi dữ liệu Finance → patch an toàn → RCA"
+          right={<Badge tone="high">risk: high</Badge>} className="lg:col-span-2">
+          <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Investigation request</label>
+          <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
+            placeholder="Mô tả vấn đề dữ liệu cần điều tra…"
+            className="mt-1.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 resize-none" />
+          <div className="mt-3 flex items-center gap-3">
+            <Btn onClick={run} disabled={loading}>
+              {loading ? <><Icon name="zap" className="w-4 h-4 animate-pulse"/>Đang điều tra…</> : <><Icon name="play" className="w-4 h-4"/>Run Investigation</>}
+            </Btn>
+            <span className="text-xs text-slate-400">0 raw rows → LLM · số liệu tính từ SQL</span>
+          </div>
+
+          {res && (
+            <div className="mt-5 space-y-5">
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 p-4">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Badge tone="verified">{res.anomaly}</Badge><Badge tone="verified">route: {res.route}</Badge>
+                </div>
+                <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed"><span className="font-semibold">Root cause:</span> {res.rootCause}</p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Stat label="Before fix" value={res.before.toFixed(2) + "%"} tone="text-rose-600" />
+                <Stat label="After fix" value={res.after.toFixed(2) + "%"} tone="text-emerald-600" />
+                <Stat label="Affected" value={res.affected} />
+                <Stat label="Tests" value={`${res.tests}/${res.testsTotal} PASS`} tone="text-emerald-600" />
+              </div>
+
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Claim verification</div>
+                <div className="space-y-1.5">
+                  {res.claims.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 dark:border-slate-800 px-3 py-2">
+                      <span className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                        <Icon name={c.s === "verified" ? "check" : "alert"} className={`w-4 h-4 ${c.s === "verified" ? "text-emerald-500" : "text-amber-500"}`}/>{c.t}
+                      </span>
+                      <Badge tone={c.s}>{c.s.replace("_", " ")}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Safe patch</div>
+                <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 text-[12.5px] font-mono">
+                  <div className="bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 px-3 py-2 flex gap-2"><span>−</span><span>{res.oldCode}</span></div>
+                  <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-3 py-2 flex gap-2"><span>+</span><span>{res.newCode}</span></div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Trust matrix</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {res.trust.map(([k, v]) => (
+                    <div key={k} className="flex items-center justify-between rounded-lg border border-slate-100 dark:border-slate-800 px-3 py-1.5 text-xs">
+                      <span className="text-slate-500 dark:text-slate-400">{k}</span><Badge tone={v}>{v}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1 border-t border-slate-100 dark:border-slate-800">
+                {!approved ? (
+                  <>
+                    <Btn onClick={() => setApproved(true)}><Icon name="check" className="w-4 h-4"/>Approve & write-back</Btn>
+                    <Btn variant="ghost"><Icon name="x" className="w-4 h-4"/>Reject</Btn>
+                    <span className="text-xs text-amber-600 dark:text-amber-400 ml-auto">Pending — chưa apply (không auto-deploy)</span>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-semibold"><Icon name="check" className="w-4 h-4"/>Approved → incident INC-2026-06-07-net_revenue ghi vào memory.</div>
+                )}
+              </div>
+            </div>
+          )}
+        </Card>
+      );
+    }
+
+    /* ───────────────────────── Monitoring + Incident card ───────────────────────── */
+    function MonitoringCard() {
+      const [tab, setTab] = useState("dq");
+      const [sweeping, setSweeping] = useState(false);
+      const [alerts, setAlerts] = useState(null);
+      const [job, setJob] = useState(JOBS[0].id);
+      const [triage, setTriage] = useState(null);
+      const sweep = () => { setSweeping(true); setAlerts(null); setTimeout(() => { setAlerts(ALERTS); setSweeping(false); }, 900); };
+      const doTriage = () => setTriage(JOBS.find(j => j.id === job));
+      const TabBtn = ({ id, children }) => (
+        <button onClick={() => setTab(id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${tab === id ? "bg-indigo-600 text-white" : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"}`}>{children}</button>
+      );
+      return (
+        <Card icon="siren" title="Proactive Monitoring & Incident Triage" subtitle="Bắt lỗi trước khi Finance báo · phân loại job-fail"
+          right={<div className="flex gap-1 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl"><TabBtn id="dq">DQ Sweep</TabBtn><TabBtn id="incident">Incident</TabBtn></div>}>
+          {tab === "dq" ? (
+            <div>
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 p-4 mb-4">
+                <div>
+                  <div className="text-xs text-slate-400">Lần sweep gần nhất</div>
+                  <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">{alerts ? `${alerts.length} anomaly trên 4 partition` : "Chưa chạy"}</div>
+                </div>
+                <Btn onClick={sweep} disabled={sweeping}>{sweeping ? <><Icon name="zap" className="w-4 h-4 animate-pulse"/>Sweeping…</> : <><Icon name="activity" className="w-4 h-4"/>Run DQ Sweep</>}</Btn>
+              </div>
+              <div className="space-y-2">
+                {alerts ? alerts.map(a => (
+                  <div key={a.date} className="rounded-xl border border-slate-200 dark:border-slate-800 p-3.5">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-semibold text-sm text-slate-700 dark:text-slate-200">
+                        <Icon name="alert" className={`w-4 h-4 ${a.sev === "high" ? "text-rose-500" : "text-amber-500"}`}/>{a.date}
+                        <Badge tone={a.sev}>{a.type}</Badge>
+                      </span>
+                      <Badge tone="Medium">tier {a.tier}</Badge>
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">{a.ev} · affected {a.amount}</div>
+                    <div className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 font-medium">→ {a.action}</div>
+                  </div>
+                )) : <p className="text-sm text-slate-400 text-center py-6">Bấm “Run DQ Sweep” để quét các partition.</p>}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Failed pipeline</label>
+              <div className="mt-1.5 flex items-center gap-2">
+                <div className="relative flex-1">
+                  <select value={job} onChange={e => { setJob(e.target.value); setTriage(null); }}
+                    className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 pl-9 pr-8 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                    {JOBS.map(j => <option key={j.id} value={j.id}>{j.id} — {j.type}</option>)}
+                  </select>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-rose-500" />
+                  <Icon name="chevron" className="w-4 h-4 rotate-90 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2"/>
+                </div>
+                <Btn onClick={doTriage}><Icon name="siren" className="w-4 h-4"/>Triage</Btn>
+              </div>
+              {triage && (
+                <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-sm text-slate-700 dark:text-slate-200">{triage.id}</span>
+                    <Badge tone={triage.sev}>{triage.type}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-slate-500 dark:text-slate-400">action:</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">{triage.action}</span>
+                    <Badge tone="Medium">tier {triage.tier}</Badge>
+                  </div>
+                  <div className={`text-sm font-medium ${triage.auto ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+                    {triage.auto ? `✓ Auto ${triage.auto} (L3 reversible)` : "Cần human approval / escalate — không tự apply"}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      );
+    }
+
+    /* ───────────────────────── Lineage card ───────────────────────── */
+    function LineageCard() {
+      const [q, setQ] = useState("");
+      const [ans, setAns] = useState(null);
+      const ask = () => {
+        const low = q.toLowerCase();
+        if (low.includes("stg_payment")) setAns(LINEAGE_ANSWERS.stg_payment);
+        else if (low.includes("net_revenue") || low.includes("revenue")) setAns(LINEAGE_ANSWERS.net_revenue);
+        else setAns("Chưa nhận ra asset/metric. Thử: 'net_revenue tính từ đâu?' hoặc 'sửa stg_payment ảnh hưởng gì?'");
+      };
+      const chips = ["net_revenue tính từ đâu?", "sửa stg_payment ảnh hưởng gì?"];
+      return (
+        <Card icon="branch" title="Quick Lineage & Impact Explorer" subtitle="L1 read-only — không ghi, không patch"
+          right={<Badge tone="High">L1</Badge>}>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Icon name="search" className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"/>
+              <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && ask()}
+                placeholder="Hỏi về lineage / impact của bảng, cột, metric…"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 pl-9 pr-3 py-2.5 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
+            </div>
+            <Btn onClick={ask}><Icon name="spark" className="w-4 h-4"/>Ask Agent</Btn>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {chips.map(c => <button key={c} onClick={() => { setQ(c); }} className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-indigo-50 hover:text-indigo-600">{c}</button>)}
+          </div>
+          {ans && (
+            <div className="mt-4 rounded-xl border border-indigo-100 dark:border-indigo-500/20 bg-indigo-50/60 dark:bg-indigo-500/5 p-4 text-sm text-slate-700 dark:text-slate-200 leading-relaxed flex gap-3">
+              <Icon name="branch" className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5"/><span>{ans}</span>
+            </div>
+          )}
+        </Card>
+      );
+    }
+
+    /* ───────────────────────── App ───────────────────────── */
+    function App() {
+      const [active, setActive] = useState("dashboard");
+      const [dark, setDark] = useState(false);
+      useEffect(() => {
+        document.documentElement.classList.toggle("dark", dark);
+        document.body.className = dark ? "bg-slate-950" : "bg-slate-100";
+      }, [dark]);
+      return (
+        <div className="flex min-h-screen text-slate-900 dark:text-slate-100">
+          <Sidebar active={active} setActive={setActive} dark={dark} setDark={setDark} />
+          <main className="flex-1 px-8 py-7 max-w-[1400px] mx-auto w-full">
+            <PageHeader />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <InvestigationCard />
+              <MonitoringCard />
+              <LineageCard />
+            </div>
+            <footer className="mt-8 text-center text-xs text-slate-400">
+              Front-end prototype · dữ liệu sample phản ánh engine Python · wire backend qua REST (FastAPI) ở bản production.
+            </footer>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

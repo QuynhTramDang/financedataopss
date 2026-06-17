@@ -1,0 +1,537 @@
+<!doctype html>
+<!--
+  Finance DataOps Copilot — full observability + AI workspace prototype.
+  Self-contained (React + Tailwind + Babel via CDN). Mở trực tiếp bằng trình duyệt.
+  Dữ liệu là metadata SAMPLE bám đúng domain; production wire vào Metadata Store + Agent qua REST.
+-->
+<html lang="vi" class="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Finance DataOps Copilot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter','system-ui','sans-serif'] } } } };</script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body{font-family:'Inter',system-ui,sans-serif}
+    @keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}} .pulse{animation:pulseDot 1.6s ease-in-out infinite}
+    @keyframes spin{to{transform:rotate(360deg)}} .spin{animation:spin 1s linear infinite}
+    .thin::-webkit-scrollbar{width:7px;height:7px}.thin::-webkit-scrollbar-thumb{background:rgba(100,116,139,.35);border-radius:8px}
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950">
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useRef } = React;
+
+    /* ───── Icons ───── */
+    function Icon({ name, className = "w-4 h-4", sw = 2 }) {
+      const p = { fill:"none", stroke:"currentColor", strokeWidth:sw, strokeLinecap:"round", strokeLinejoin:"round" };
+      const s = (c) => <svg viewBox="0 0 24 24" className={className} {...p}>{c}</svg>;
+      switch (name) {
+        case "grid": return s(<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></>);
+        case "workflow": return s(<><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M6 9v3a3 3 0 0 0 3 3h6"/></>);
+        case "siren": return s(<><path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21h14"/><path d="M12 2v1M21 12h1M2 12h1M19 5l-.7.7M5.7 5.7 5 5"/></>);
+        case "terminal": return s(<><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></>);
+        case "activity": return s(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>);
+        case "clock": return s(<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>);
+        case "network": return s(<><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v4M10 17l-3.5-3M14 17l3.5-3"/></>);
+        case "target": return s(<><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></>);
+        case "database": return s(<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></>);
+        case "percent": return s(<><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></>);
+        case "message": return s(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>);
+        case "send": return s(<><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></>);
+        case "search": return s(<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>);
+        case "chevron": return s(<path d="m9 18 6-6-6-6"/>);
+        case "check": return s(<><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>);
+        case "x": return s(<><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></>);
+        case "alert": return s(<><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/></>);
+        case "play": return s(<polygon points="6 4 20 12 6 20 6 4"/>);
+        case "refresh": return s(<><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></>);
+        case "link": return s(<><path d="M15 7h3a5 5 0 0 1 0 10h-3M9 17H6A5 5 0 0 1 6 7h3"/><line x1="8" y1="12" x2="16" y2="12"/></>);
+        case "user": return s(<><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></>);
+        case "bot": return s(<><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 2h8"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></>);
+        case "spark": return s(<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>);
+        case "rocket": return s(<><path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2 0-2.7a1.9 1.9 0 0 0-3 0Z"/><path d="m12 15-3-3a22 22 0 0 1 2-4 12.9 12.9 0 0 1 11-6c0 2.7-.8 7.7-6 11a22 22 0 0 1-4 2Z"/></>);
+        case "layers": return s(<><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></>);
+        case "sun": return s(<><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></>);
+        case "moon": return s(<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>);
+        case "code": return s(<><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></>);
+        case "wrench": return s(<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-2.4 2.6-2.6Z"/>);
+        default: return s(<circle cx="12" cy="12" r="3"/>);
+      }
+    }
+
+    /* ───── Sample metadata ───── */
+    const DAGS = [
+      { id:"load_stripe_payments", status:"failed", cause:"transient (HTTP 429)", runtime:0, baseline:120, sla:"03:00", lastRun:"03:02", owner:"data-platform" },
+      { id:"stg_payment_dag", status:"running", runtime:45, baseline:90, sla:"03:30", lastRun:"đang chạy", owner:"data-platform" },
+      { id:"revenue_daily_dag", status:"success", runtime:78, baseline:80, sla:"04:00", lastRun:"04:01", owner:"finance-data" },
+      { id:"daily_orders_pipeline", status:"failed", cause:"schema_drift", runtime:0, baseline:60, sla:"02:30", lastRun:"02:31", owner:"orders-data" },
+      { id:"export_finance_report", status:"failed", cause:"permission", runtime:0, baseline:20, sla:"05:00", lastRun:"05:00", owner:"finance-data" },
+      { id:"transform_margin", status:"failed", cause:"code_bug (KeyError)", runtime:0, baseline:30, sla:"06:00", lastRun:"06:00", owner:"finance-data" },
+      { id:"refresh_dashboards", status:"delayed", runtime:0, baseline:15, sla:"07:00", lastRun:"chưa trigger", owner:"bi-team" },
+    ];
+    const TABLES = [
+      { name:"payment_txn", layer:"source", fresh:"OK", updated:"09:00", rows:"1.27M", nullRate:"0%", drift:false, owner:"data-platform" },
+      { name:"order_fact", layer:"source", fresh:"OK", updated:"02:50", rows:"320K", nullRate:"0%", drift:false, owner:"orders-data" },
+      { name:"stg_payment", layer:"staging", fresh:"OK", updated:"03:25", rows:"1.27M", nullRate:"0%", drift:false, owner:"data-platform" },
+      { name:"revenue_daily", layer:"mart", fresh:"STALE", updated:"hôm qua 04:01", rows:"1.4K", nullRate:"0%", drift:true, owner:"finance-data" },
+      { name:"finance_revenue_report", layer:"report", fresh:"STALE", updated:"hôm qua", rows:"—", nullRate:"—", drift:false, owner:"finance-data" },
+    ];
+    const METRICS = [
+      { name:"net_revenue", formula:"paid_amount − refunded_amount", tables:["payment_txn","order_fact"], dag:"revenue_daily_dag", owner:"Finance" },
+      { name:"gross_revenue", formula:"sum(paid_amount)", tables:["payment_txn"], dag:"revenue_daily_dag", owner:"Finance" },
+      { name:"active_user", formula:"count(distinct user_id) where active", tables:["user_event"], dag:"user_daily_dag", owner:"Growth" },
+    ];
+    const INCIDENTS = [
+      { id:"INC-2026-0607", title:"net_revenue overstated 2.1%", sev:"high", priority:"P1", cause:"enum drift: PARTIAL_REFUND chưa được map", impact:["finance_revenue_report","net_revenue","Finance"], status:"open", dag:"revenue_daily_dag" },
+      { id:"INC-2026-0609", title:"Missing partition 2026-06-09", sev:"high", priority:"P1", cause:"upstream chưa load (0 row)", impact:["revenue_daily","finance_revenue_report"], status:"open", dag:"stg_payment_dag" },
+      { id:"INC-ORD-SCHEMA", title:"daily_orders schema drift", sev:"high", priority:"P1", cause:"cột required mới: order_channel", impact:["stg_orders","Orders dashboard"], status:"open", dag:"daily_orders_pipeline" },
+      { id:"INC-2026-0608", title:"Null spike amount 40%", sev:"medium", priority:"P2", cause:"ingestion trả null", impact:["revenue_daily"], status:"open", dag:"stg_payment_dag" },
+    ];
+    const LOGS = {
+      daily_orders_pipeline: [["02:30:10","INFO","task daily_orders_pipeline started"],["02:30:55","ERROR","Schema mismatch in stg_orders: required column 'order_channel' added by upstream"],["02:30:55","ERROR","model stg_orders failed to compile"]],
+      load_stripe_payments: [["03:01:12","INFO","task started"],["03:02:01","ERROR","HTTP 429 Too Many Requests: rate limit exceeded"],["03:02:01","ERROR","failed after 3 retries"]],
+      revenue_daily_dag: [["04:00:03","INFO","task revenue_daily started"],["04:00:31","ERROR","dbt test accepted_values for refund_status failed (PARTIAL_REFUND)"]],
+      export_finance_report: [["05:00:08","ERROR","permission denied for table finance_revenue_report"]],
+      transform_margin: [["06:00:12","ERROR","Traceback ... KeyError: 'amount'"]],
+    };
+    // lineage graph: id, label, layer, x, y
+    const LN_NODES = [
+      { id:"payment_txn", layer:"source", x:40, y:40 }, { id:"order_fact", layer:"source", x:40, y:150 },
+      { id:"stg_payment", layer:"staging", x:240, y:40 },
+      { id:"revenue_daily", layer:"mart", x:450, y:95 },
+      { id:"net_revenue", layer:"metric", x:660, y:40 }, { id:"finance_revenue_report", layer:"report", x:660, y:150 },
+    ];
+    const LN_EDGES = [["payment_txn","stg_payment"],["stg_payment","revenue_daily"],["order_fact","revenue_daily"],["revenue_daily","net_revenue"],["revenue_daily","finance_revenue_report"]];
+    const LAYER_COLOR = { source:"#0ea5e9", staging:"#6366f1", mart:"#8b5cf6", metric:"#10b981", report:"#f59e0b" };
+
+    /* ───── status helpers ───── */
+    const STATUS_TONE = {
+      success:"emerald", running:"indigo", failed:"rose", delayed:"amber", pending:"slate",
+      high:"rose", medium:"amber", low:"slate", OK:"emerald", STALE:"amber", open:"rose",
+    };
+    const toneCls = (t) => ({
+      emerald:"text-emerald-700 bg-emerald-50 ring-emerald-600/20 dark:text-emerald-400 dark:bg-emerald-500/10",
+      indigo:"text-indigo-700 bg-indigo-50 ring-indigo-600/20 dark:text-indigo-400 dark:bg-indigo-500/10",
+      rose:"text-rose-700 bg-rose-50 ring-rose-600/20 dark:text-rose-400 dark:bg-rose-500/10",
+      amber:"text-amber-700 bg-amber-50 ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10",
+      slate:"text-slate-600 bg-slate-100 ring-slate-500/20 dark:text-slate-300 dark:bg-slate-700/40",
+    }[t] || "");
+    const Badge = ({ tone="slate", children }) => <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${toneCls(STATUS_TONE[tone]||tone)}`}>{children}</span>;
+    const Dot = ({ tone="emerald", pulse }) => <span className={`inline-block w-2 h-2 rounded-full bg-${tone}-500 ${pulse?"pulse":""}`} style={{background:{emerald:"#10b981",rose:"#f43f5e",amber:"#f59e0b",indigo:"#6366f1",slate:"#94a3b8"}[STATUS_TONE[tone]||tone]}} />;
+
+    const Btn = ({ variant="primary", className="", children, ...r }) => {
+      const v = { primary:"bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 shadow-sm", ghost:"bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-3.5 py-2", soft:"bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 px-3 py-1.5" }[variant];
+      return <button className={`inline-flex items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-60 ${v} ${className}`} {...r}>{children}</button>;
+    };
+    const Card = ({ children, className="" }) => <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 ${className}`}>{children}</div>;
+    const SectionTitle = ({ icon, children, sub }) => (
+      <div className="flex items-center gap-2.5 mb-3">
+        {icon && <span className="grid place-items-center w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"><Icon name={icon} className="w-[18px] h-[18px]"/></span>}
+        <div><h2 className="font-bold text-slate-800 dark:text-slate-100">{children}</h2>{sub && <p className="text-xs text-slate-400">{sub}</p>}</div>
+      </div>
+    );
+
+    /* ───── KPI ───── */
+    const kpis = () => {
+      const failed = DAGS.filter(d=>d.status==="failed").length;
+      const running = DAGS.filter(d=>d.status==="running").length;
+      const stale = TABLES.filter(t=>t.fresh==="STALE").length;
+      return [
+        { label:"DAG failed", value:failed, tone:"rose", icon:"workflow" },
+        { label:"Running", value:running, tone:"indigo", icon:"refresh" },
+        { label:"SLA breach", value:2, tone:"amber", icon:"clock" },
+        { label:"Stale tables", value:stale, tone:"amber", icon:"database" },
+        { label:"Open incidents", value:INCIDENTS.length, tone:"rose", icon:"siren" },
+        { label:"DQ anomalies", value:3, tone:"amber", icon:"activity" },
+      ];
+    };
+
+    /* ───── Screens ───── */
+    function Overview({ go, openChat }) {
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+            {kpis().map(k => (
+              <Card key={k.label} className="p-4">
+                <div className="flex items-center justify-between"><span className="text-xs text-slate-400 font-medium">{k.label}</span><Icon name={k.icon} className={`w-4 h-4 text-${k.tone}-500`}/></div>
+                <div className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 mt-1">{k.value}</div>
+              </Card>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <Card className="p-5 xl:col-span-2">
+              <SectionTitle icon="workflow" sub="trạng thái pipeline gần nhất">DAG Status</SectionTitle>
+              <div className="space-y-1.5">
+                {DAGS.map(d => (
+                  <button key={d.id} onClick={()=>go("dag")} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-left">
+                    <Dot tone={d.status} pulse={d.status==="running"} />
+                    <span className="font-mono text-[13px] text-slate-700 dark:text-slate-200 flex-1 truncate">{d.id}</span>
+                    {d.cause && <span className="text-[11px] text-rose-500 truncate hidden sm:block">{d.cause}</span>}
+                    <Badge tone={d.status}>{d.status}</Badge>
+                  </button>
+                ))}
+              </div>
+            </Card>
+            <Card className="p-5">
+              <SectionTitle icon="siren" sub="ưu tiên xử lý">Open Incidents</SectionTitle>
+              <div className="space-y-2">
+                {INCIDENTS.slice(0,4).map(i => (
+                  <button key={i.id} onClick={()=>{openChat(i,"Debug"); }} className="w-full text-left rounded-lg border border-slate-100 dark:border-slate-800 p-2.5 hover:border-indigo-300">
+                    <div className="flex items-center justify-between"><span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 truncate">{i.title}</span><Badge tone={i.sev}>{i.priority}</Badge></div>
+                    <div className="text-[11px] text-slate-400 mt-0.5 truncate">{i.cause}</div>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    function DagMonitor({ openChat }) {
+      return (
+        <Card className="p-5">
+          <SectionTitle icon="workflow" sub="Airflow / Dagster / Prefect">DAG Monitor</SectionTitle>
+          <div className="overflow-x-auto thin">
+            <table className="w-full text-sm">
+              <thead><tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                <th className="py-2 pr-3">DAG</th><th className="pr-3">Status</th><th className="pr-3">Runtime vs baseline</th><th className="pr-3">SLA</th><th className="pr-3">Owner</th><th></th></tr></thead>
+              <tbody>
+                {DAGS.map(d => {
+                  const pct = d.baseline ? Math.min(100, Math.round((d.runtime/d.baseline)*100)) : 0;
+                  return (
+                    <tr key={d.id} className="border-b border-slate-50 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-2.5 pr-3 font-mono text-[13px] text-slate-700 dark:text-slate-200">{d.id}</td>
+                      <td className="pr-3"><span className="flex items-center gap-1.5"><Dot tone={d.status} pulse={d.status==="running"}/><Badge tone={d.status}>{d.status}</Badge></span></td>
+                      <td className="pr-3 w-44"><div className="flex items-center gap-2"><div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800"><div className={`h-full rounded-full ${pct>95?"bg-rose-500":pct>0?"bg-indigo-500":"bg-slate-300"}`} style={{width:`${pct}%`}}/></div><span className="text-[11px] text-slate-400">{d.runtime}/{d.baseline}m</span></div></td>
+                      <td className="pr-3 text-[12px] text-slate-500">{d.sla}</td>
+                      <td className="pr-3 text-[12px] text-slate-500">{d.owner}</td>
+                      <td>{d.status==="failed" && <Btn variant="soft" onClick={()=>openChat({type:"dag",id:d.id,cause:d.cause},"Debug")}><Icon name="bot" className="w-3.5 h-3.5"/>Debug</Btn>}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      );
+    }
+
+    function IncidentCenter({ openChat }) {
+      return (
+        <Card className="p-5">
+          <SectionTitle icon="siren" sub="cảnh báo · nguyên nhân nghi ngờ · mức độ ảnh hưởng">Incident Center</SectionTitle>
+          <div className="space-y-2.5">
+            {INCIDENTS.map(i => (
+              <div key={i.id} className="rounded-lg border border-slate-100 dark:border-slate-800 p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2"><Icon name="alert" className={`w-4 h-4 text-${STATUS_TONE[i.sev]}-500`}/><span className="font-semibold text-slate-700 dark:text-slate-200">{i.title}</span><Badge tone="open">open</Badge></span>
+                  <Badge tone={i.sev}>{i.priority}</Badge>
+                </div>
+                <div className="text-xs text-slate-500 mt-1.5">Nguyên nhân nghi ngờ: <span className="text-slate-600 dark:text-slate-300 font-medium">{i.cause}</span></div>
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className="text-[11px] text-slate-400">Impact:</span>
+                  {i.impact.map(x => <Badge key={x} tone="amber">{x}</Badge>)}
+                  <Btn variant="soft" className="ml-auto" onClick={()=>openChat({type:"incident",id:i.id,cause:i.cause,dag:i.dag},"Debug")}><Icon name="bot" className="w-3.5 h-3.5"/>Ask AI</Btn>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      );
+    }
+
+    function LogExplorer() {
+      const [dag, setDag] = useState("daily_orders_pipeline");
+      const [level, setLevel] = useState("ALL");
+      const lines = (LOGS[dag]||[]).filter(l => level==="ALL" || l[1]===level);
+      const tone = { INFO:"text-slate-400", WARN:"text-amber-500", ERROR:"text-rose-500" };
+      return (
+        <Card className="p-5">
+          <SectionTitle icon="terminal" sub="log tập trung theo DAG / task / level">Log Explorer</SectionTitle>
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <select value={dag} onChange={e=>setDag(e.target.value)} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 text-sm">{Object.keys(LOGS).map(k=> <option key={k}>{k}</option>)}</select>
+            <div className="flex gap-1">{["ALL","INFO","WARN","ERROR"].map(l => <button key={l} onClick={()=>setLevel(l)} className={`px-2.5 py-1 rounded-md text-xs font-semibold ${level===l?"bg-indigo-600 text-white":"bg-slate-100 dark:bg-slate-800 text-slate-500"}`}>{l}</button>)}</div>
+          </div>
+          <div className="rounded-lg bg-slate-950 text-slate-200 font-mono text-[12.5px] p-3 space-y-1 thin overflow-x-auto">
+            {lines.length? lines.map((l,i)=>(<div key={i} className="flex gap-3 whitespace-nowrap"><span className="text-slate-500">{l[0]}</span><span className={`font-bold ${tone[l[1]]}`}>{l[1]}</span><span>{l[2]}</span></div>)) : <span className="text-slate-500">— no lines —</span>}
+          </div>
+        </Card>
+      );
+    }
+
+    function DataQuality() {
+      const rows = [
+        { table:"payment_txn", rule:"accepted_values(refund_status)", status:"FAIL", detail:"value mới PARTIAL_REFUND chưa khai báo" },
+        { table:"payment_txn", rule:"null_rate(amount) < 5%", status:"FAIL", detail:"null_rate 40% ngày 2026-06-08" },
+        { table:"payment_txn", rule:"freshness(partition daily)", status:"FAIL", detail:"thiếu partition 2026-06-09" },
+        { table:"revenue_daily", rule:"reconciliation vs baseline", status:"FAIL", detail:"lệch 2.10%" },
+        { table:"order_fact", rule:"not_null(order_id)", status:"PASS", detail:"—" },
+        { table:"stg_payment", rule:"unique(txn_id)", status:"PASS", detail:"—" },
+      ];
+      return (
+        <Card className="p-5">
+          <SectionTitle icon="activity" sub="Great Expectations / dbt tests / anomaly">Data Quality Monitor</SectionTitle>
+          <div className="space-y-1.5">
+            {rows.map((r,i)=>(
+              <div key={i} className="flex items-center gap-3 rounded-lg border border-slate-100 dark:border-slate-800 px-3 py-2">
+                <Icon name={r.status==="PASS"?"check":"x"} className={`w-4 h-4 ${r.status==="PASS"?"text-emerald-500":"text-rose-500"}`}/>
+                <span className="font-mono text-[12px] text-slate-500 w-40 truncate">{r.table}</span>
+                <span className="text-[13px] text-slate-700 dark:text-slate-200 flex-1">{r.rule}</span>
+                <span className="text-[11px] text-slate-400 hidden md:block flex-1 truncate">{r.detail}</span>
+                <Badge tone={r.status==="PASS"?"OK":"high"}>{r.status}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      );
+    }
+
+    function Freshness() {
+      return (
+        <Card className="p-5">
+          <SectionTitle icon="clock" sub="bảng nào stale / chưa update đúng lịch">Data Freshness Monitor</SectionTitle>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {TABLES.map(t => (
+              <div key={t.name} className="rounded-lg border border-slate-100 dark:border-slate-800 p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[13px] text-slate-700 dark:text-slate-200">{t.name}</span>
+                  <Badge tone={t.fresh==="OK"?"OK":"STALE"}>{t.fresh}</Badge>
+                </div>
+                <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-3">
+                  <span><span className="capitalize">{t.layer}</span> · {t.rows} rows · null {t.nullRate}</span>
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5">Updated: {t.updated}{t.drift && <span className="text-amber-500"> · schema drift</span>}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      );
+    }
+
+    function LineageGraph({ select }) {
+      const pos = Object.fromEntries(LN_NODES.map(n=>[n.id,n]));
+      const W=170,H=48;
+      return (
+        <Card className="p-5">
+          <SectionTitle icon="network" sub="source → staging → mart → metric / report">Lineage Graph</SectionTitle>
+          <div className="overflow-x-auto thin">
+            <svg viewBox="0 0 850 230" className="w-full min-w-[760px]">
+              {LN_EDGES.map(([a,b],i)=>{const A=pos[a],B=pos[b];return <path key={i} d={`M ${A.x+W} ${A.y+H/2} C ${A.x+W+50} ${A.y+H/2}, ${B.x-50} ${B.y+H/2}, ${B.x} ${B.y+H/2}`} fill="none" stroke="#cbd5e1" strokeWidth="2"/>;})}
+              {LN_NODES.map(n=>(
+                <g key={n.id} onClick={()=>select(n.id)} style={{cursor:"pointer"}}>
+                  <rect x={n.x} y={n.y} width={W} height={H} rx="10" fill="white" stroke={LAYER_COLOR[n.layer]} strokeWidth="2"/>
+                  <rect x={n.x} y={n.y} width="5" height={H} rx="2" fill={LAYER_COLOR[n.layer]}/>
+                  <text x={n.x+16} y={n.y+20} fontSize="13" fontWeight="700" fill="#334155" fontFamily="monospace">{n.id}</text>
+                  <text x={n.x+16} y={n.y+37} fontSize="10" fill="#94a3b8">{n.layer}</text>
+                </g>
+              ))}
+            </svg>
+          </div>
+          <div className="flex gap-3 mt-2 flex-wrap text-[11px]">{Object.entries(LAYER_COLOR).map(([k,c])=><span key={k} className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full" style={{background:c}}/>{k}</span>)}</div>
+          <p className="text-xs text-slate-400 mt-2">Click node để chọn ngữ cảnh và hỏi AI về lineage / impact.</p>
+        </Card>
+      );
+    }
+
+    function ImpactView({ openChat }) {
+      const [asset, setAsset] = useState("stg_payment");
+      const closure = { payment_txn:["stg_payment","revenue_daily","net_revenue","finance_revenue_report"], stg_payment:["revenue_daily","net_revenue","finance_revenue_report"], revenue_daily:["net_revenue","finance_revenue_report"], order_fact:["revenue_daily","net_revenue","finance_revenue_report"] };
+      const aff = closure[asset]||[];
+      return (
+        <Card className="p-5">
+          <SectionTitle icon="target" sub="thay đổi asset này ảnh hưởng downstream gì">Impact Analysis</SectionTitle>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm text-slate-500">Nếu sửa</span>
+            <select value={asset} onChange={e=>setAsset(e.target.value)} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 text-sm font-mono">{Object.keys(closure).map(k=><option key={k}>{k}</option>)}</select>
+            <Btn variant="soft" className="ml-auto" onClick={()=>openChat({type:"table",id:asset},"Impact")}><Icon name="bot" className="w-3.5 h-3.5"/>Ask what-if</Btn>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-3">
+            <div className="rounded-lg border border-slate-100 dark:border-slate-800 p-3"><div className="text-xs text-slate-400">Pipelines</div><div className="font-bold text-slate-700 dark:text-slate-200">{aff.filter(a=>["stg_payment","revenue_daily"].includes(a)).join(", ")||"—"}</div></div>
+            <div className="rounded-lg border border-slate-100 dark:border-slate-800 p-3"><div className="text-xs text-slate-400">Metrics</div><div className="font-bold text-slate-700 dark:text-slate-200">{aff.filter(a=>a==="net_revenue").join(", ")||"—"}</div></div>
+            <div className="rounded-lg border border-slate-100 dark:border-slate-800 p-3"><div className="text-xs text-slate-400">Reports / teams</div><div className="font-bold text-slate-700 dark:text-slate-200">{aff.includes("finance_revenue_report")?"finance_revenue_report · Finance":"—"}</div></div>
+          </div>
+          <div className="mt-4 flex items-center gap-2 flex-wrap text-sm">
+            <span className="font-mono px-2 py-1 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">{asset}</span>
+            {aff.map(a=><React.Fragment key={a}><Icon name="chevron" className="w-3.5 h-3.5 text-slate-300"/><span className="font-mono px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">{a}</span></React.Fragment>)}
+          </div>
+        </Card>
+      );
+    }
+
+    /* ───── AI Chat ───── */
+    const MODES = ["Explain","Debug","Impact","Optimize","What-if"];
+    function buildAnswer(q, ctx, mode) {
+      const low = (q||"").toLowerCase();
+      // Debug DAG
+      if (mode==="Debug" || low.includes("fail") || low.includes("vì sao") || (ctx&&ctx.type==="dag") || (ctx&&ctx.type==="incident")) {
+        const cause = (ctx&&ctx.cause) || "schema_drift";
+        const klass = cause.includes("429")||cause.includes("transient") ? "infra/transient"
+          : cause.includes("schema") ? "data/schema issue"
+          : cause.includes("permission") ? "infra/permission"
+          : cause.includes("code")||cause.includes("KeyError") ? "code issue"
+          : cause.includes("enum")||cause.includes("PARTIAL") ? "data issue"
+          : "dependency issue";
+        const action = klass.includes("transient") ? "Auto-retry với backoff (L3, reversible)."
+          : klass.includes("schema") ? "Tạo PR cập nhật mapping cột mới → cần Finance/Data Owner approval (L2)."
+          : klass.includes("permission") ? "Notify owner + cấp quyền read-only; không tự sửa."
+          : klass.includes("code") ? "Đề xuất fix code (L2) → review trước khi merge."
+          : "Đề xuất patch mapping + chạy reconciliation (L2).";
+        return { text:`DAG/Incident **${ctx?ctx.id:"?"}** fail — phân loại: **${klass}**.`,
+          dag: ctx?ctx.dag||ctx.id:"—", cause, confidence:"High",
+          links:["log://"+(ctx&&(ctx.dag||ctx.id)), "dag://"+(ctx&&(ctx.dag||ctx.id))],
+          next:[action, "Xem log chi tiết ở Log Explorer"] };
+      }
+      // Lineage / source of metric
+      if (low.includes("lấy từ đâu") || low.includes("từ đâu") || low.includes("gmv") || low.includes("revenue") || low.includes("metric") || mode==="Explain") {
+        const m = METRICS.find(x=>low.includes(x.name)) || METRICS[0];
+        return { text:`**${m.name}** được tính như sau:`, formula:m.formula, source:m.tables.join(", "),
+          sql:`SELECT SUM(amount) - SUM(CASE WHEN refund_status IN ('REFUNDED','PARTIAL_REFUND') THEN refunded_amount ELSE 0 END)\nFROM ${m.tables[0]} WHERE txn_date = :d`,
+          dag:m.dag, updated:"hôm qua 04:01", downstream:["finance_revenue_report"], confidence:"High",
+          links:["table://"+m.tables[0], "dag://"+m.dag, "dashboard://finance_revenue_report"],
+          next:["Xem lineage graph đầy đủ", "Kiểm tra freshness của "+m.tables[0]] };
+      }
+      // Impact / what-if
+      if (mode==="Impact" || mode==="What-if" || low.includes("ảnh hưởng") || low.includes("sửa") || low.includes("nếu đổi") || low.includes("thay đổi")) {
+        const asset = (ctx&&ctx.id) || "stg_payment";
+        return { text:`Thay đổi **${asset}** sẽ ảnh hưởng downstream:`,
+          downstream:["revenue_daily","net_revenue","finance_revenue_report","Finance team"], confidence:"Medium",
+          links:["lineage://"+asset], next:["Chạy reconciliation sau khi đổi", "Thông báo Finance Owner (SLA 04:00)"] };
+      }
+      // Freshness
+      if (mode==="Optimize" || low.includes("tối ưu") || low.includes("chậm") || low.includes("lâu")) {
+        return { text:`Phân tích tối ưu cho **${(ctx&&ctx.id)||"revenue_daily_dag"}**:`,
+          confidence:"Medium",
+          next:["Partition payment_txn theo txn_date (đang full scan 1 phần)","Gộp 2 task staging chạy tuần tự → song song","Cache profile refund_status (giảm ~30% runtime)"],
+          links:["dag://revenue_daily_dag"] };
+      }
+      return { text:"Mình cần thêm ngữ cảnh (chọn 1 DAG/table/metric ở sidebar hoặc nêu rõ tên). Mình không trả lời chung chung khi metadata không đủ.", confidence:"Low", next:[] };
+    }
+
+    function AnswerCard({ a }) {
+      const Row = ({ label, children }) => <div className="flex gap-2 text-[12.5px]"><span className="text-slate-400 w-24 shrink-0">{label}</span><span className="text-slate-700 dark:text-slate-200 font-medium">{children}</span></div>;
+      return (
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 space-y-2">
+          <p className="text-[13px] text-slate-700 dark:text-slate-200" dangerouslySetInnerHTML={{__html:a.text.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}}/>
+          {a.source && <Row label="Nguồn bảng">{a.source}</Row>}
+          {a.formula && <Row label="Công thức"><code className="text-indigo-600 dark:text-indigo-400">{a.formula}</code></Row>}
+          {a.dag && <Row label="DAG tạo ra"><span className="font-mono">{a.dag}</span></Row>}
+          {a.cause && <Row label="Nguyên nhân">{a.cause}</Row>}
+          {a.updated && <Row label="Cập nhật">{a.updated}</Row>}
+          {a.sql && <pre className="bg-slate-950 text-slate-200 rounded-lg p-2.5 text-[11.5px] font-mono overflow-x-auto thin whitespace-pre-wrap">{a.sql}</pre>}
+          {a.downstream && <Row label="Downstream"><span className="flex flex-wrap gap-1">{a.downstream.map(d=><Badge key={d} tone="amber">{d}</Badge>)}</span></Row>}
+          {a.confidence && <Row label="Độ tin cậy"><Badge tone={a.confidence==="High"?"OK":a.confidence==="Medium"?"medium":"low"}>{a.confidence}</Badge></Row>}
+          {a.links && a.links.length>0 && <div className="flex flex-wrap gap-1.5 pt-1">{a.links.map((l,i)=><span key={i} className="inline-flex items-center gap-1 text-[11px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md"><Icon name="link" className="w-3 h-3"/>{l}</span>)}</div>}
+          {a.next && a.next.length>0 && <div className="pt-1"><div className="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-1">Next actions</div><ul className="space-y-0.5">{a.next.map((n,i)=><li key={i} className="flex gap-1.5 text-[12.5px] text-slate-600 dark:text-slate-300"><Icon name="check" className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0"/>{n}</li>)}</ul></div>}
+        </div>
+      );
+    }
+
+    function ChatPanel({ ctx, setCtx, seed, dark }) {
+      const [mode, setMode] = useState("Explain");
+      const [input, setInput] = useState("");
+      const [msgs, setMsgs] = useState([{ role:"ai", a:{ text:"Xin chào! Mình là DataOps Copilot. Chọn 1 DAG/table/metric hoặc hỏi mình về lineage, lỗi, impact.", confidence:"High", next:[] } }]);
+      const endRef = useRef(null);
+      const ask = (text, m=mode) => {
+        if (!text) return;
+        const a = buildAnswer(text, ctx, m);
+        setMsgs(prev => [...prev, { role:"user", text }, { role:"ai", a }]);
+        setInput("");
+      };
+      useEffect(()=>{ if(seed){ setMode(seed.mode); ask(seed.q, seed.mode);} }, [seed]);
+      useEffect(()=>{ endRef.current && endRef.current.scrollIntoView({behavior:"smooth"}); }, [msgs]);
+      const quick = { Explain:["net_revenue tính từ đâu?","GMV trong dashboard này lấy từ đâu?"], Debug:["DAG này fail vì sao?","Log lỗi nằm ở đâu?"], Impact:["Sửa stg_payment ảnh hưởng gì?"], Optimize:["Pipeline này tối ưu ở đâu?"], "What-if":["Nếu đổi schedule hourly→daily thì sao?"] }[mode];
+      return (
+        <aside className="w-[380px] shrink-0 h-screen sticky top-0 flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800">
+          <div className="px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+            <span className="grid place-items-center w-8 h-8 rounded-lg bg-indigo-600 text-white"><Icon name="bot" className="w-4 h-4"/></span>
+            <div className="flex-1"><div className="font-bold text-slate-800 dark:text-slate-100 text-sm">Data Intelligence Copilot</div><div className="text-[11px] text-slate-400">trả lời dựa trên metadata thật</div></div>
+          </div>
+          <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center gap-1.5 flex-wrap">
+            {MODES.map(m=><button key={m} onClick={()=>setMode(m)} className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${mode===m?"bg-indigo-600 text-white":"bg-slate-100 dark:bg-slate-800 text-slate-500"}`}>{m}</button>)}
+          </div>
+          {ctx && <div className="px-4 py-2 bg-indigo-50 dark:bg-indigo-500/10 border-b border-indigo-100 dark:border-indigo-500/20 flex items-center gap-2 text-[12px]"><Icon name="target" className="w-3.5 h-3.5 text-indigo-500"/><span className="text-indigo-700 dark:text-indigo-300">Context: <b className="font-mono">{ctx.id}</b> <span className="opacity-60">({ctx.type})</span></span><button onClick={()=>setCtx(null)} className="ml-auto text-indigo-400 hover:text-indigo-600"><Icon name="x" className="w-3.5 h-3.5"/></button></div>}
+          <div className="flex-1 overflow-y-auto thin p-3 space-y-3">
+            {msgs.map((m,i)=> m.role==="user"
+              ? <div key={i} className="flex justify-end"><div className="bg-indigo-600 text-white rounded-xl rounded-br-sm px-3 py-2 text-[13px] max-w-[85%]">{m.text}</div></div>
+              : <div key={i} className="max-w-[95%]"><AnswerCard a={m.a}/></div>)}
+            <div ref={endRef}/>
+          </div>
+          <div className="px-3 pt-2 flex flex-wrap gap-1.5">{quick.map(q=><button key={q} onClick={()=>ask(q)} className="text-[11px] px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600">{q}</button>)}</div>
+          <div className="p-3 flex items-center gap-2">
+            <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&ask(input)} placeholder={`Hỏi (${mode})…`} className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40"/>
+            <Btn onClick={()=>ask(input)}><Icon name="send" className="w-4 h-4"/></Btn>
+          </div>
+        </aside>
+      );
+    }
+
+    /* ───── Sidebar ───── */
+    const NAV = [["overview","System Health","grid"],["dag","DAG Monitor","workflow"],["incident","Incident Center","siren"],["log","Log Explorer","terminal"],["dq","Data Quality","activity"],["fresh","Data Freshness","clock"],["lineage","Lineage Graph","network"],["impact","Impact Analysis","target"]];
+    function Sidebar({ screen, setScreen, setCtx, dark, setDark }) {
+      const [open, setOpen] = useState("DAGs");
+      const groups = { DAGs:DAGS.map(d=>d.id), Tables:TABLES.map(t=>t.name), Metrics:METRICS.map(m=>m.name) };
+      const typeOf = { DAGs:"dag", Tables:"table", Metrics:"metric" };
+      return (
+        <aside className="w-64 shrink-0 h-screen sticky top-0 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+          <div className="px-4 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2.5">
+            <span className="grid place-items-center w-9 h-9 rounded-xl bg-indigo-600 text-white"><Icon name="layers" className="w-5 h-5"/></span>
+            <div><div className="flex items-center gap-1.5"><span className="font-extrabold text-slate-800 dark:text-white text-sm">DataOps Copilot</span><span className="text-[9px] font-bold uppercase px-1 py-0.5 rounded bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300">Ent</span></div><span className="text-[10px] text-slate-400">Finance Data Platform</span></div>
+          </div>
+          <nav className="px-2.5 py-3 space-y-0.5">
+            {NAV.map(([k,l,ic])=><button key={k} onClick={()=>setScreen(k)} className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium ${screen===k?"bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300":"text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}><Icon name={ic} className="w-[17px] h-[17px]"/>{l}</button>)}
+          </nav>
+          <div className="flex-1 overflow-y-auto thin px-2.5 border-t border-slate-100 dark:border-slate-800 pt-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-1">Catalog</div>
+            {Object.keys(groups).map(g=>(
+              <div key={g}>
+                <button onClick={()=>setOpen(open===g?"":g)} className="w-full flex items-center gap-1.5 px-2 py-1.5 text-[12px] font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600"><Icon name="chevron" className={`w-3.5 h-3.5 transition-transform ${open===g?"rotate-90":""}`}/>{g} <span className="text-slate-400 font-normal">({groups[g].length})</span></button>
+                {open===g && <div className="pl-5 pb-1 space-y-0.5">{groups[g].map(x=><button key={x} onClick={()=>setCtx({type:typeOf[g],id:x})} className="block w-full text-left font-mono text-[11.5px] text-slate-500 hover:text-indigo-600 truncate px-1 py-0.5">{x}</button>)}</div>}
+              </div>
+            ))}
+          </div>
+          <div className="px-3 py-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <span className="text-[11px] text-slate-400 truncate">tramdnq@vng.com.vn</span>
+            <button onClick={()=>setDark(d=>!d)} className="grid place-items-center w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-indigo-600"><Icon name={dark?"sun":"moon"} className="w-4 h-4"/></button>
+          </div>
+        </aside>
+      );
+    }
+
+    const SCREEN_TITLE = Object.fromEntries(NAV.map(([k,l])=>[k,l]));
+    function App() {
+      const [screen, setScreen] = useState("overview");
+      const [ctx, setCtx] = useState(null);
+      const [seed, setSeed] = useState(null);
+      const [dark, setDark] = useState(false);
+      useEffect(()=>{ document.documentElement.classList.toggle("dark",dark); document.body.className=dark?"bg-slate-950":"bg-slate-100"; },[dark]);
+      const openChat = (context, mode) => { setCtx(context); setSeed({ q: mode==="Debug"?"DAG này fail vì sao?":mode==="Impact"?"Sửa cái này ảnh hưởng gì?":"Giải thích", mode, _:Math.random() }); };
+      const screens = {
+        overview:<Overview go={setScreen} openChat={openChat}/>, dag:<DagMonitor openChat={openChat}/>,
+        incident:<IncidentCenter openChat={openChat}/>, log:<LogExplorer/>, dq:<DataQuality/>,
+        fresh:<Freshness/>, lineage:<LineageGraph select={(id)=>{setCtx({type:"table",id});}}/>, impact:<ImpactView openChat={openChat}/>,
+      };
+      return (
+        <div className="flex min-h-screen text-slate-900 dark:text-slate-100">
+          <Sidebar screen={screen} setScreen={setScreen} setCtx={setCtx} dark={dark} setDark={setDark}/>
+          <main className="flex-1 min-w-0 px-7 py-6 overflow-x-hidden">
+            <div className="flex items-center justify-between mb-5">
+              <div><h1 className="text-xl font-extrabold text-slate-900 dark:text-white">{SCREEN_TITLE[screen]}</h1><p className="text-xs text-slate-400">Impact-Aware Finance DataOps Twin · LangGraph Control Plane</p></div>
+              <div className="flex items-center gap-2"><Badge tone="OK"><span className="flex items-center gap-1"><Dot tone="emerald" pulse/>system online</span></Badge></div>
+            </div>
+            {screens[screen]}
+          </main>
+          <ChatPanel ctx={ctx} setCtx={setCtx} seed={seed} dark={dark}/>
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>

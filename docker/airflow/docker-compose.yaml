@@ -1,0 +1,19 @@
+# Airflow local (standalone, SQLite) cho M1 — có REST API /api/v1 + basic auth admin/admin.
+# Chạy:  docker compose -f docker/airflow/docker-compose.yaml up
+# UI/REST: http://localhost:8080  (admin/admin)
+services:
+  airflow:
+    image: apache/airflow:2.9.3
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "sqlite:////opt/airflow/airflow.db"
+      AIRFLOW__CORE__EXECUTOR: "SequentialExecutor"
+    volumes:
+      - ./dags:/opt/airflow/dags
+    command: >
+      bash -c "airflow db migrate &&
+               (airflow users create -u admin -p admin -f a -l a -r Admin -e admin@example.com || true) &&
+               (airflow scheduler & exec airflow webserver)"

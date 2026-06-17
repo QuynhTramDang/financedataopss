@@ -1,0 +1,42 @@
+[
+  {
+    "pipeline": "stg_payment",
+    "repo_path": "pipelines/models/staging/stg_payment.sql",
+    "metric": null,
+    "upstream": ["payment_txn"],
+    "downstream": ["ods_payment_enriched"],
+    "common_issues": ["schema drift", "null spike", "enum drift"]
+  },
+  {
+    "pipeline": "stg_order",
+    "repo_path": "pipelines/models/staging/stg_order.sql",
+    "metric": null,
+    "upstream": ["order_fact"],
+    "downstream": ["ods_payment_enriched"],
+    "common_issues": ["fk break", "missing dimension"]
+  },
+  {
+    "pipeline": "ods_payment_enriched",
+    "repo_path": "pipelines/models/ods/ods_payment_enriched.sql",
+    "metric": null,
+    "upstream": ["stg_payment", "stg_order"],
+    "downstream": ["dtm_revenue_daily"],
+    "common_issues": ["refund_status mapping", "duplicate transaction", "fk break"]
+  },
+  {
+    "pipeline": "dtm_revenue_daily",
+    "repo_path": "pipelines/models/finance/dtm_revenue_daily.sql",
+    "metric": "net_revenue",
+    "upstream": ["ods_payment_enriched"],
+    "downstream": ["finance_revenue_report"],
+    "common_issues": ["refund_status mapping", "distribution drift", "late-arriving payment"]
+  },
+  {
+    "pipeline": "revenue_daily",
+    "repo_path": "pipelines/models/finance/revenue_daily.sql",
+    "metric": "net_revenue",
+    "upstream": ["payment_txn"],
+    "downstream": ["finance_revenue_report"],
+    "common_issues": ["schema drift", "late-arriving payment", "refund_status mapping"]
+  }
+]
